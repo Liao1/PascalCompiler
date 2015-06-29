@@ -7,10 +7,7 @@ using namespace llvm;
 
 Value* ConstAST::Codegen(CodeGenContext& context)  //by ly
 {
-	string variableName;
-	BasicTypeAST* type;
-	constValue value;
-
+	
 }
 Value* SelfdefineTypeAST::Codegen(CodeGenContext& context)	//by ly
 {
@@ -71,9 +68,15 @@ Value* BoolExprAST::Codegen(CodeGenContext& context)
 }
 Value* StringExprAST::Codegen(CodeGenContext& context)	//by ly
 {
+	cout << "Creating string: " << val << endl;
+	return builder.CreateGlobalStringPtr(val);
 }
 Value* CharExprAST::Codegen(CodeGenContext& context)	//by ly
 {
+	cout << "Create char: " << val << endl;
+	string s = "";
+	s = s + val;
+	return builder.CreateGlobalStringPtr(s);
 }
 Value* VariableExprAST::Codegen(CodeGenContext& context)
 {  
