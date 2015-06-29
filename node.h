@@ -185,7 +185,7 @@ class VariableDeclAST : public Node{
 public:
 	TypeAST *type;
 	std::vector<string> variableName;
-	VariableDeclAST(const string t, std::vector<string> v):type(t), variableName(v){}
+	VariableDeclAST(TypeAST *t, std::vector<string> v):type(t), variableName(v){}
 	Value* Codegen(CodeGenContext& context) override;
 	VariableDeclAST* ErrorN(const char *str){Error(str); return 0;}
 };
@@ -369,36 +369,28 @@ public:
 	RepeatExprAST* ErrorR(const char *str){Error(str); return 0;}	
 };
 
-//函数原型，包含函数名和参数名，暂区分形参和变参
-class PrototypeAST : public Node{
-public:
-	string name;
-	std::vector<VariableDeclAST*> decl;
-	TypeAST* returnType;
-
-	PrototypeAST(const string funcName, const std::vector<string> &funcArgs)
-		:name(funcName), args(funcArgs){}
-	Function* Codegen(CodeGenContext& context) override;
-	PrototypeAST* ErrorP(const char *str) { Error(str); return 0; }
-};
-
 //函数，包含原型和函数体表达式
 class FunctionAST : public Node{
-public:
-  PrototypeAST *proto;
-  std::vector<ConstAST*> consts;
-  std::vector<SelfdefineTypeAST*> selfdefineType;
-  std::vector<VariableDeclAST*> decl;
-  std::vector<FunctionAST*> functions;
-  std::vector<ExprAST*> body;
+public:    
+	enum class FunctionType { function, procedure};
+	string name;
+	std::vector<VariableDeclAST*> headerDecl;
+	TypeAST* returnType;
+	std::vector<ConstAST*> consts;
+	std::vector<SelfdefineTypeAST*> selfdefineType;
+	std::vector<VariableDeclAST*> bodyDecl;
+	std::vector<FunctionAST*> functions;
+	std::vector<ExprAST*> body;
+    FunctionType     type;//区分是procedure还是function
+   
+    bool isFunction() { return type == FunctionType::function; }
+    bool isProcedure() { return type == FunctionType::procedure; }
 
-  int type;//区分是procedure还是function
-
-  FunctionAST(PrototypeAST *funcProto, std::vector<ConstAST*> con, std::vector<SelfdefineTypeAST*> de, 
-  			  std::vector<FunctionAST*> subFun, std::vector<VariableDeclAST*> funcDecl, std::vector<ExprAST*> funcBody)
-  			  :proto(funcProto), consts(con), selfdefineType(de), decl(funcDecl), functions(subFun), body(funcBody) {}
-  Function* Codegen(CodeGenContext& context) override;
-  FunctionAST* ErrorF(const char * str) {Error(str); return 0;}
+    FunctionAST(const string funcName,std::vector<VariableDeclAST*> funcArgs,TypeAST* ty , std::vector<ConstAST*> con, std::vector<SelfdefineTypeAST*> de, 
+  			  std::vector<FunctionAST*> subFun, std::vector<VariableDeclAST*> funcDecl, std::vector<ExprAST*> funcBody, FunctionType ft)
+  			  :name(funcName),headerDecl(funcArgs),returnType(ty), consts(con), selfdefineType(de), decl(funcDecl), functions(subFun), body(funcBody),type(ft)  {}
+    Value* Codegen(CodeGenContext& context) override;
+    FunctionAST* ErrorF(const char * str) {Error(str); return 0;}
 };
 
 class CodeGenContext{

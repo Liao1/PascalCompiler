@@ -7,7 +7,35 @@ using namespace llvm;
 
 Value* ConstAST::Codegen(CodeGenContext& context)  //by ly
 {
-	
+	Value* constVal;
+
+	if (type->type == INTEGER) {
+		NumberExprAST n = NumberExprAST(value.i);
+		n.type = Number;
+		constVal = n->Codegen(context);//生成对应常量
+	} else if (type->type == REAL) {
+		RealExprAST r = RealExprAST(value.r);
+		r.type = Real;
+		constVal = r->Codegen(context);
+	} else if (type->type == BOOL) {
+		BoolExprAST b = BoolExprAST(value.b);
+		b.type = Bool;
+		constVal = b->Codegen(context);
+	} else if (type->type == STRING) {
+		StringExprAST s = StringExprAST(value.s);
+		s.type = String;
+		constVal = s->Codegen(context);
+	} else if (type->type == CHAR) {
+		CharExprAST c = CharExprAST(value.c);
+		c.type = Char;
+		constVal = s->Codegen(context);
+	}
+
+	std::vector<string> v;
+	v.push_back(variableName);
+	VariableDeclAST variabledecl = VariableDeclAST(type, v);
+	variabledecl->Codegen();//定义对应类型的变量
+	return builder.CreateStore(constVal, context.locals()[variableName]);//对变量进行赋值
 }
 Value* SelfdefineTypeAST::Codegen(CodeGenContext& context)	//by ly
 {
@@ -329,94 +357,82 @@ Value* WhileExprAST::Codegen(CodeGenContext& context)
 Value* RepeatExprAST::Codegen(CodeGenContext& context)
 {
 }
-Function* PrototypeAST::Codegen(CodeGenContext& context)
+Value* FunctionAST::Codegen(CodeGenContext& context)
 {
-	std::vector<Type*> Doubles(Args.size(),
-                             Type::getDoubleTy(getGlobalContext()));
-    FunctionType *FT = FunctionType::get(Type::getDoubleTy(getGlobalContext()),
-                                       Doubles, false);
-    
-    Function *F = Function::Create(FT, Function::ExternalLinkage, Name, module);
-  
-    // If F conflicted, there was already something named 'Name'.  If it has a
-    // body, don't allow redefinition or reextern.
-    if (F->getName() != Name) 
+    std::vector<llvm::Type*> arg_types;
+    for(int i = 0;i < headerDecl.size();i++)
     {
-    // Delete the one we just made and get the existing one.
-    F->eraseFromParent();
-    F = module->getFunction(Name);
-    
-    // If F already has a body, reject this.
-    if (!F->empty()) 
+    	if (headerDecl[i]->type->type == INTEGER)
+    	arg_types.push_back(llvm::Type::getInt32Ty(llvm::getGlobalContext())); 
+    	else
+    	arg_types.push_back(llvm::Type::getVoidTy(llvm::getGlobalContext())); 
+    }
+    if (headerDecl[i]->type->type == INTEGER)
+    auto f_type = llvm::FunctionType::get(this->isProcedure() ? llvm::Type::getVoidTy(llvm::getGlobalContext()) : llvm::Type::getInt32Ty(llvm::getGlobalContext()), llvm::makeArrayRef(arg_types), false);
+    else
+    auto f_type = llvm::FunctionType::get(this->isProcedure() ? llvm::Type::getVoidTy(llvm::getGlobalContext()) : llvm::Type::getVoidTy(llvm::getGlobalContext()), llvm::makeArrayRef(arg_types), false);
+    auto function = llvm::Function::Create(f_type, llvm::GlobalValue::InternalLinkage, this->name.c_str(), context.module);
+    auto block = llvm::BasicBlock::Create(getGlobalContext(), "entry", function, 0);
+
+    // push block and start routine
+    context.pushBlock(block);
+
+    // deal with arguments
+    llvm::Value* arg_value;    
+    auto args_values = function->arg_begin();
+    for (int i = 0; i < headerDecl.size(); i++)
     {
-      ErrorF("redefinition of function");
-      return 0;
+    	headerDecl[i]->Codegen(context);
+    	arg_value = args_values++;
+        arg_value->setName(headerDecl[i]->name.c_str());
+       	builder.CreateStore(arg_value,context.locals()[headerDecl[i]->name]);
+       // auto inst = new llvm::StoreInst(arg_value, context.locals()[arg->name->name], false, block);
+
     }
-    
-    // If F took a different number of args, reject.
-    if (F->arg_size() != Args.size()) 
+
+    // add function return variable
+    if (this->isFunction()) {
+        std::cout << "Creating function return value declaration" << std::endl;
+        if (this->returnType->type == INTEGER) 
+        auto alloc = new llvm::AllocaInst(Type::getInt32Ty(llvm::getGlobalContext()), this->name.c_str(), context.currentBlock());
+		else
+		auto alloc = new llvm::AllocaInst(Type::getVoidTy(llvm::getGlobalContext()), this->name.c_str(), context.currentBlock());
+		Builder.CreateStore(this->name.c_str(), alloc);        	
+        context.locals()[this->name] = alloc;
+        // auto alloc = new llvm::AllocaInst(this->return_type->toLLVMType(), this->routine_name->name.c_str(), context.currentBlock());
+    }
+    // deal with variable declaration
+    for (int i = 0; i < bodyDecl.size(); i++)
     {
-      ErrorF("redefinition of function with different # args");
-      return 0;
+    	bodyDecl[i]->Codegen(context);
     }
-  }
-  
-  // Set names for all arguments.
-  unsigned Idx = 0;
-  for (Function::arg_iterator AI = F->arg_begin(); Idx != Args.size();
-       ++AI, ++Idx) {
-    AI->setName(Args[Idx]);
-    
-    // Add arguments to variable symbol table.
-    context.locals[Args[Idx]] = AI;
-  }
-  
-  return F;
+    // deal with program statements
+    for (int i = 0; i < functions.size(); i++)
+    {
+    	functions[i]->Codegen(context);
+    }
+    for (int i = 0; i < body.size(); i++)
+    {
+    	body[i]->Codegen(context);
+    }
 
-}
-Function* FunctionAST::Codegen(CodeGenContext& context)
-{
-	  context.locals.clear();
-  
-	  Function *TheFunction = proto->Codegen();
-	  if (TheFunction == 0)
-	    return 0;
-	  
-	  // Create a new basic block to start insertion into.
-	  BasicBlock *BB = BasicBlock::Create(getGlobalContext(), "entry", TheFunction);
-	  builder.SetInsertPoint(BB);
-	  
-	  if (Value *RetVal = body->Codegen()) {
-	    // Finish off the function.
-	    builder.CreateRet(RetVal);
+    // return value
+    if (this->isFunction()) {
+        std::cout << "Generating return value for function" << std::endl;
+        auto load_ret = new llvm::LoadInst(context.locals()[this->name], "", false, context.currentBlock());
+       // llvm::ReturnInst::Create(llvm::getGlobalContext(), load_ret, block);
+        builder.CreateRet(llvm::getGlobalContext(), load_ret);
+    }
+    else if(this->isProcedure()) {
+        std::cout << "Generating return void for procedure" << std::endl;
+        builder.CreateRetVoid(llvm::getGlobalContext());
+     //   llvm::ReturnInst::Create(llvm::getGlobalContext(), block);
+        
+    }
 
-	    // Validate the generated code, checking for consistency.
-	    verifyFunction(*TheFunction);
-
-	    return TheFunction;
-	  }
-	  
-	  // Error reading body, remove function.
-	  TheFunction->eraseFromParent();
-	  return 0;
-
-}
-Value* ProgramAST::Codegen(CodeGenContext& context)
-{
-	
-	Value* last = nullptr;    
-	for(int i = 0; i < consts.size())) {
-        last = records[i]->Codegen(context);
-    }
-    for(int i = 0; i < records.size())) {
-        last = records[i]->Codegen(context);
-    }
-    for(int i = 0; i < decl.size()) {
-        last = decl[i]->Codegen(context);
-    }
-    for(int i = 0; i < functions.size()) {
-        last = functions[i]->Codegen(context);
-    }
-    return last;
+    // pop block and finsh
+    context.popBlock();
+  //  std::cout << "Creating " << this->toString() << ":" << this->routine_name->name << std::endl;
+    return function;
 
 }
