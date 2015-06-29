@@ -2,7 +2,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include "SyntaxTree.h"
-#include "Global.h"
+
 /* new tree node */
 TreeNode *CreateNode(NodeKind kind){
 	TreeNode *p = (TreeNode *)malloc(sizeof(TreeNode));
@@ -121,7 +121,7 @@ TreeNode *CreateConstExp(TypeKind type){
 TreeNode *CreateIdExp(char *name){
 	TreeNode *p = CreateNode(expr_kind);
 	p->expr = id_kind;
-	p->id = basic;
+	p->id = Basic;
 	strcpy(p->name, name);
 	return p;
 }
@@ -129,7 +129,7 @@ TreeNode *CreateIdArrayExp(char *name, TreeNode *exp){
 	TreeNode *p = CreateNode(expr_kind);
 	p->children[0] = exp;
 	p->expr = id_kind;
-	p->id = array;
+	p->id = Array;
 	strcpy(p->name, name);
 	return p;
 }
@@ -137,7 +137,7 @@ TreeNode *CreateIdRecordExp(char *name, char *domain){
 	TreeNode *p = CreateNode(expr_kind);
 	p->children[0] = CreateIdExp(domain);
 	p->expr = id_kind;
-	p->id = record;
+	p->id = Record;
 	strcpy(p->name, name);
 	return p;
 }
@@ -233,9 +233,9 @@ void print_expr_op(TreeNode *p){
 }
 void print_expr_id(TreeNode *p){
 	switch (p->id){
-		case basic: fprintf(fout, "Id_expr_basic: %s", p->name); break;
-		case array: fprintf(fout, "Id_expr_array: %s", p->name); break;
-		case record: fprintf(fout, "Id_expr_record: %s", p->name); break;
+		case Basic: fprintf(fout, "Id_expr_basic: %s", p->name); break;
+		case Array: fprintf(fout, "Id_expr_array: %s", p->name); break;
+		case Record: fprintf(fout, "Id_expr_record: %s", p->name); break;
 	}
 }
 void print_expr_fn(TreeNode *p){

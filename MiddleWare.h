@@ -3,9 +3,9 @@
 #include "SyntaxTree.h"
 #include "node.h"
 ConstAST *CreateConstAST(TreeNode *p);
-TypeAST *CreateTypeAST(TreeNode *p);
+BasicTypeAST *CreateTypeAST(TreeNode *p);
 VariableDeclAST * CreateVariableAST(TreeNode *p);
-PrototypeAST * CreatePrototypeAST(TreeNode *p);
+// PrototypeAST * CreatePrototypeAST(TreeNode *p);
 ExprAST *CreateExprAST(TreeNode *p);
 ExprAST *CreateStmtExprAST(TreeNode *p);
 FunctionAST *CreateFunctionAST(TreeNode *p);

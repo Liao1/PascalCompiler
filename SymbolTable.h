@@ -17,7 +17,8 @@ typedef struct SymbolTable{
 } SymbolTable;
 
 /* function declaration*/
-int hash(char *key);
+void throw_error(string s, TreeNode *p);
+int myhash(char *key);
 SymbolTable *CreateSymbolTable(char *path, int nestLevel);
 void InsertSymbol(char *name, TreeNode *node, SymbolTable *symtab);
 void Insert(char *name, char *path, TreeNode *node);
@@ -27,4 +28,12 @@ TreeNode *Lookup(char *name, char *path);
 int ExistSymbolTable(char *path);
 void ConnectSymtabs(SymbolTable *p1, SymbolTable *p2);
 void SymtabTraverseTree(TreeNode *p, char *path, int nestLevel, SymbolTable *symtab);
+void BuildSymTab();
+void print_symtab(SymbolTable *p);
+extern int lineNo;
+extern FILE *fout;
+extern TreeNode *root;
+extern SymbolTable *SymTab;
+extern char path[256];
+extern int nestLevel;
 #endif

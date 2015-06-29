@@ -1,7 +1,7 @@
 #ifndef Node_H
 #define Node_H
 
-#include <SyntaxTree.h>
+#include "SyntaxTree.h"
 #include <vector>
 #include <llvm/IR/Value.h>
 #include <llvm/IR/Module.h>
@@ -41,7 +41,7 @@ extern IRBuilder<> builder;
 extern Module module;
 extern Function *startFunc;
 extern string errorMsg;
-extern Node *program;
+extern FunctionAST *program;
 
 extern Value* createCast(Value *value,Type *type);
 extern Constant* getInitial(Type *type);
@@ -141,6 +141,7 @@ class ExprAST : public Node{
 public:
 	ExprType type;
 	ExprAST(){}
+	virtual Value* Codegen(CodeGenContext& context);
 	// ExprAST* ErrorE(const char *str){Error(str); return 0;}//这里设置返回，是为了报错时可以扩展为定位到节点而不是简单出现错误信息
 };
 
@@ -204,7 +205,6 @@ public:
 class CharExprAST : public ExprAST {
 public:
 	char val;
-
 	CharExprAST(char value):val(value){}
 	CharExprAST(const CharExprAST &f):val(f.val){}
 	Value* Codegen(CodeGenContext &context) override;
@@ -263,9 +263,9 @@ public:
 //变量声明
 class VariableDeclAST : public Node{
 public:
-	TypeAST *type;
+	BasicTypeAST *type;
 	vector<string> variableName;
-	VariableDeclAST(TypeAST *t, vector<string> v):type(t), variableName(v){}
+	VariableDeclAST(BasicTypeAST *t, vector<string> v):type(t), variableName(v){}
 	VariableDeclAST(const VariableDeclAST &f):type(f.type), variableName(f.variableName){}
 	Value* Codegen(CodeGenContext &context) override;
 	void print(int n) override;
@@ -430,26 +430,26 @@ public:
 };
 
 //函数，包含原型和函数体表达式
+typedef enum { type_function, type_procedure} functionType;
 class FunctionAST : public Node{
 public:
-	enum class FunctionType { function, procedure};
 	string name;
 	std::vector<VariableDeclAST*> headerDecl;
-	TypeAST* returnType;
+	BasicTypeAST* returnType;
 	std::vector<ConstAST*> consts;
 	std::vector<SelfdefineTypeAST*> selfdefineType;
 	std::vector<VariableDeclAST*> bodyDecl;
 	std::vector<FunctionAST*> functions;
 	std::vector<ExprAST*> body;
 
-    FunctionType type;//区分是procedure还是function
-    bool isFunction() { return type == FunctionType::function; }
-    bool isProcedure() { return type == FunctionType::procedure; }
+    functionType type;//区分是procedure还是function
+    bool isFunction() { return type == type_function; }
+    bool isProcedure() { return type == type_procedure; }
 
-	FunctionAST(string name, vector<VariableDeclAST *>args, TypeAST *returnType, 
+	FunctionAST(string name, vector<VariableDeclAST *>args, BasicTypeAST *returnType, 
 				vector<ConstAST*> con, vector<SelfdefineTypeAST*> de, 
 				vector<VariableDeclAST*> funcDecl, vector<FunctionAST *> subFun, 
-				vector<ExprAST*> funcBody, FunctionType t)
+				vector<ExprAST*> funcBody, functionType t)
 			:name(name), headerDecl(args), returnType(returnType), 
 			consts(con), selfdefineType(de), bodyDecl(funcDecl), functions(subFun), 
 			body(funcBody), type(t){}
@@ -461,11 +461,11 @@ public:
 };
 
 class CodeGenContext{
+public:
     CodeGenContext *parent;
     map<string, Type*> typeTable;
     map<string, FunctionAST*> functionTable;
     map<string, Value*> locals;
-public:
     FunctionAST *currentFunc;
 
     CodeGenContext(CodeGenContext *parent=NULL):parent(parent){
@@ -475,13 +475,12 @@ public:
             currentFunc = NULL;
         }
     }
-    Type* getType(string name);
-    FunctionAST* getFunction(string name);
-    Value* getVar(string name);
-    bool addFunction(string name, FunctionAST *FunctionAST);
-    bool addVar(string name, Value *var);
-    bool addType(string name, Type *type);
-    
+    // Type* getType(string name);
+    // FunctionAST* getFunction(string name);
+    // Value* getVar(string name);
+    // bool addFunction(string name, FunctionAST *FunctionAST);
+    // bool addVar(string name, Value *var);
+    // bool addType(string name, Type *type);
 };
 
 #endif

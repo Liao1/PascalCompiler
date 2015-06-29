@@ -1,5 +1,7 @@
 #ifndef SYNTAX_TREE_H
 #define SYNTAX_TREE_H
+#include <iostream>
+using namespace std;
 /* Node type define*/
 typedef enum { 
 	/* top */
@@ -57,7 +59,7 @@ typedef enum {
 	con_kind	// const value kind
 } ExprKind;
 /* id_kind */
-typedef enum { basic, array, record } IdKind;
+typedef enum { Basic, Array, Record } IdKind;
 /* op_kind */
 typedef enum {
 	plus_kind,	// plus
@@ -156,5 +158,8 @@ void print_expr(TreeNode *p);
 void print_stmt(TreeNode *p);
 void print_sub(TreeNode *p);
 void print_tree(TreeNode *p, int level);
-
+extern int lineNo;
+extern FILE *fout;
+extern TreeNode *root;
+//extern SymbolTable *SymTab;
 #endif

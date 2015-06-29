@@ -1,7 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "Global.h"
 #include "SymbolTable.h"
 #include "SyntaxTree.h"
 #include "TypeChecking.h"
@@ -12,25 +11,25 @@ void evalType(TreeNode *p, char *path){
 	if (!p) return;
 	switch (p->node){
 		case routine_kind: {
-			printf("eval routine\n");
+			//printf("eval routine\n");
 			evalType(p->children[0], path);
 			break;
 		}
 		case const_kind: {
-			printf("eval const: %s\n", p->name);
+			//printf("eval const: %s\n", p->name);
 			p->dtype = p->children[0]->dtype;
 			evalType(p->sibling, path);
 			break;
 		}
 		case type_kind: {
-			printf("eval type: %s\n", p->name);
+			//printf("eval type: %s\n", p->name);
 			evalType(p->sibling, path);
 			break;
 		}
 		case var_kind: {
-			printf("eval var\n");
-			if (p->dtype)
-				printf("has type\n");
+			//printf("eval var\n");
+			//if (p->dtype)
+			//	printf("has type\n");
 			p->children[0]->dtype = p->dtype;
 			evalType(p->children[0], path);
 			evalType(p->sibling, path);
@@ -39,7 +38,7 @@ void evalType(TreeNode *p, char *path){
 		case sub_kind: {
 			switch (p->sub){
 				case func_kind: case proc_kind: {
-					printf("eval sub: %s\n", p->name);
+					//printf("eval sub: %s\n", p->name);
 					sprintf(local_path, "%s/%s", path, p->name);
 					evalType(p->children[0], local_path);
 					evalType(p->children[1], local_path);
@@ -47,7 +46,7 @@ void evalType(TreeNode *p, char *path){
 					break;
 				}
 				default: {
-					printf("eval sub param\n");
+					//printf("eval sub param\n");
 					p->children[0]->dtype = p->dtype;
 					evalType(p->children[0], path);
 					break;
@@ -58,11 +57,11 @@ void evalType(TreeNode *p, char *path){
 		case expr_kind: {
 			switch (p->expr){
 				case id_kind: {
-					printf("eval id: %s\n", p->name);
-					if (p->dtype)
-						printf("has type\n");
+					//printf("eval id: %s\n", p->name);
+					//if (p->dtype)
+					//	printf("has type\n");
 					if (p->sibling){
-						printf("sibling id: %s\n", p->sibling->name);
+						//printf("sibling id: %s\n", p->sibling->name);
 						p->sibling->dtype = p->dtype;
 						evalType(p->sibling, path);
 					}
@@ -228,6 +227,7 @@ int is_integer(TreeNode *p){
 
 
 void TypeChecking(TreeNode *root){
-	char *path = "global";
+	char path[256];
+	strcpy(path, "global");
 	evalType(root, path);
 }

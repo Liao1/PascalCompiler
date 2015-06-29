@@ -4,29 +4,41 @@
 ConstAST *CreateConstAST(TreeNode *p){
 	string name(p->name);
 	BasicTypeAST * type = CreateTypeAST(p->dtype);
+	p = p->children[0];
+	constValue val;
 	switch (p->dtype->type){
 		case integer_type: case boolean_type: case char_type:
-			return new ConstAST(name, type, p->attr.intVal);
+			val.i = val.b = val.c = p->attr.intVal;
+			return new ConstAST(name, type, val);
 		case real_type:
-			return new ConstAST(name, type, p->attr.realVal);
+			val.d = p->attr.realVal;
+			return new ConstAST(name, type, val);
 		case string_type:
-			return new ConstAST(name, type, p->attr.strVal);
+			val.s = string(p->attr.strVal);
+			return new ConstAST(name, type, val);
 		default: return NULL;
 	}
 }
 /* 创建类型声明节点 */
-TypeAST *CreateTypeAST(TreeNode *p){
+BasicTypeAST *CreateTypeAST(TreeNode *p){
+	// cout<<"create type ast"<<endl;
+	if (!p) return NULL;
 	switch (p->type){
 		case integer_type:
-			return new BasicTypeAST(INTEGER);
+			// cout<<"integer"<<endl;
+			return new BasicTypeAST(Integer);
 		case real_type:
-			return new BasicTypeAST(REAL);
+			// cout<<"real"<<endl;
+			return new BasicTypeAST(Real);
 		case char_type:
-			return new BasicTypeAST(CHAR);
+			// cout<<"char"<<endl;
+			return new BasicTypeAST(Char);
 		case boolean_type:
-			return new BasicTypeAST(BOOL);
+			// cout<<"boolean"<<endl;
+			return new BasicTypeAST(Bool);
 		case string_type:
-			return new BasicTypeAST(STRING);
+			// cout<<"string"<<endl;
+			return new BasicTypeAST(String);
 		default:
 			return NULL;
 	}
@@ -37,12 +49,13 @@ VariableDeclAST * CreateVariableAST(TreeNode *p){
 	vector<string> names;
 	while (q){
 		names.push_back(q->name);
+		// cout<<q->name<<endl;
 		q = q->sibling;
 	}
 	return new VariableDeclAST(CreateTypeAST(p->dtype), names);
 }
 /* 创建函数声明节点 */
-PrototypeAST * CreatePrototypeAST(TreeNode *p){
+/*PrototypeAST * CreatePrototypeAST(TreeNode *p){
 	vector <VariableDeclAST *> decl;
 	string name(p->name);
 	TreeNode *q = p->children[0];
@@ -52,17 +65,19 @@ PrototypeAST * CreatePrototypeAST(TreeNode *p){
 		while (qchildren){
 			VariableDeclAST *tmp = new VariableDeclAST(
 				qchildren->name, 
-				new CreateTypeAST(dtype)
+				CreateTypeAST(dtype),
 				);
 			decl.push_back(tmp);
 			qchildren = qchildren->sibling;
 		}
 		q = q->sibling;
 	}
-}
+	return new PrototypeAST(name, decl, CreateTypeAST(type));
+}*/
 /* 创建表达式节点 */
 ExprAST *CreateExprAST(TreeNode *p){
 	if (!p) return NULL;
+	// cout<<"create expr"<<endl;
 	ExprAST *left = CreateExprAST(p->children[0]);
 	ExprAST *right = CreateExprAST(p->children[1]);
 	switch (p->expr){
@@ -117,14 +132,15 @@ ExprAST *CreateExprAST(TreeNode *p){
 		}
 		case id_kind:{
 			switch (p->id){
-				case basic:
+				case Basic:
 					return new VariableExprAST(p->name);
-				case array:
-					return new ArrayVariableExprAST(
+				case Array:
+					return NULL;
+					/*return new ArrayVariableExprAST(
 						p->name,
 						CreateExprAST(p->children[0])
-						);
-				case record:
+						);*/
+				case Record:
 					return NULL;
 			}
 		}
@@ -156,6 +172,7 @@ ExprAST *CreateExprAST(TreeNode *p){
 	}
 }
 ExprAST *CreateStmtExprAST(TreeNode *p){
+	// cout<<"createStmt"<<endl;
 	switch (p->stmt){
 		case assign_stmt:{
 			return new BinaryExprAST(
@@ -170,47 +187,65 @@ ExprAST *CreateStmtExprAST(TreeNode *p){
 }
 /* 创建函数过程节点 */
 FunctionAST *CreateFunctionAST(TreeNode *p){
-	PrototypeAST *proto;
+	//PrototypeAST *proto;
+	// cout<<"createFunction"<<endl;
+	string name(p->name);
+	vector <VariableDeclAST *> args;
 	std::vector<ConstAST *> consts;
 	std::vector<SelfdefineTypeAST *> type;
 	std::vector<VariableDeclAST *> decl;
 	std::vector<FunctionAST *> functions;
 	std::vector<ExprAST *>body;
-	proto = CreatePrototypeAST(p);
-	proto->returnType = CreateTypeAST(p->dtype);
+	BasicTypeAST *returnType;
+	//proto = CreatePrototypeAST(p);
+	TreeNode *q = p->children[0];
+	//TreeNode *type = p->dtype;
+	// cout<<"create args"<<endl;
+	while (q){
+		VariableDeclAST *tmp = CreateVariableAST(q);
+		args.push_back(tmp);
+		q = q->sibling;
+	}
+	// cout<<"create return_type"<<endl;
+	returnType = CreateTypeAST(p->dtype);
 	/* routine head part */
-	q = p->children[0];
+	q = p->children[1]->children[0];
 	while (q){
 		switch (q->node){
 			case const_kind:{
+				// cout<<"create const"<<endl;
 				consts.push_back(CreateConstAST(q)); 
 				break;
 			}
 			case type_kind:{
+				// cout<<"create type"<<endl;
 				//type.push_back(CreateTypeAST(q));
 				break;
 			}
 			case var_kind:{
-				str::vector<VariableDeclAST *>tmp;
-				tmp = CreateVariableAST(p);
-				for (int i=0; i<tmp.size(); i++){
-					decl.push_back(tmp[i]);
-				} 
+				// cout<<"create var"<<endl;
+				VariableDeclAST *tmp;
+				tmp = CreateVariableAST(q);
+				decl.push_back(tmp); 
 				break;
 			}
 			case sub_kind:{
+				// cout<<"create function"<<endl;
 				functions.push_back(CreateFunctionAST(q)); 
 				break;
 			} 
 		}
 		q = q->sibling;
 	}
+	// cout<<"create stmt"<<endl;
 	/* routine body part */
-	vector<ExprAST *> body;
-	q = p->chilren[1];
+	q = p->children[1]->children[1];
 	while (q){
 		body.push_back(CreateStmtExprAST(q));
 		q = q->sibling;
 	}
-	return new FunctionAST(proto, consts, type, decl, functions, body);
+	if (p->sub==func_kind)
+		return new FunctionAST(name, args, returnType, consts, type, decl, functions, body, type_function);
+	else 
+		return new FunctionAST(name, args, returnType, consts, type, decl, functions, body, type_procedure);
 }

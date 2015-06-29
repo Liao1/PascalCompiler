@@ -1,17 +1,16 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "Global.h"
 #include "SymbolTable.h"
 #include "SyntaxTree.h"
 /* error handler*/
-void throw_error(char *s, TreeNode *p){
-	fprintf(stderr, "line %d: %s: %s\n", p->lineNo, s, p->name);
+void throw_error(string s, TreeNode *p){
+	fprintf(stderr, "line %d: %s: %s\n", p->lineNo, s.c_str(), p->name);
 }
 /* hash function */
 #define SIZE 256
 #define SHIFT 4
-int hash(char *key){
+int myhash(char *key){
 	int ret = 0;
 	int i = 0;
 	while (key[i]!='\0'){
@@ -41,7 +40,7 @@ int ExistSymbolTable(char *path){
 }
 /* Create Symbol element */
 void InsertSymbol(char *name, TreeNode *node, SymbolTable *symtab){
-	int idx = hash(name);
+	int idx = myhash(name);
 	Symbol *q = symtab->NameList[idx];
 	/* init p */
 	Symbol *p = (Symbol *)malloc(sizeof(Symbol));
@@ -74,7 +73,7 @@ int sub_str(char *src, char *dst){
 }
 /* lookup in a symbol table */
 TreeNode *LookupSymbol(char *name, SymbolTable *symtab){
-	int idx = hash(name);
+	int idx = myhash(name);
 	Symbol *p = symtab->NameList[idx];
 	while (p){
 		if (!strcmp(p->name, name)){

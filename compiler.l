@@ -1,7 +1,10 @@
 %{
 	#include<stdio.h>
-	#include "Global.h"
 	#include "compiler.tab.c"
+	int sys_function(char *s);
+	int resWord(char *s);
+	int sys_proc(char *s);
+	int sys_type(char *s);
 %}
 %%
 ">="	return GE;

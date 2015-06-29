@@ -1,14 +1,19 @@
 %{
 	#include<stdio.h>
 	#include<string.h>
-	#include "Global.h"
 	#include "SyntaxTree.h"
 	#include "SymbolTable.h"
 	#include "TypeChecking.h"
+	#include "MiddleWare.h"
+	#include "node.h"
+	int yylex(void);
+	void yyerror(char *);
 	int lineNo;
 	FILE *fout;
 	TreeNode *root;
 	SymbolTable *SymTab;
+	char path[256];
+	int nestLevel;
 %}
 %union{
 	int intValue;
@@ -40,7 +45,7 @@
 %%
 /*program derivation*/
 program:
-	program_head routine DOT	{ root = CreateProcHead("main", NULL); root->children[1] = $2; }
+	program_head routine DOT	{ root = CreateProcHead((char *)"main", NULL); root->children[1] = $2; }
 	;
 program_head:
 	PROGRAM NAME SEMI	
@@ -442,27 +447,6 @@ const_value:
 	}
 	;
 %%
-int main(int argc, char *argv[]){
-	yyin = fopen(argv[1], "r");
-	fout = fopen(argv[2], "w");
-	lineNo = 1;
-	/* parsing tree */
-	yyparse();
-	/* symbol table */
-	BuildSymTab();
-	//print_symtab(SymTab);
-	/* type checking*/
-	TypeChecking(root);
-	/* print tree */
-	fprintf(fout, "root");
-	if (!root) printf("null\n");
-	print_tree(root, 1);
-	//GenerateCode("Code.ll", root);
-	/* = = = = = = = = = */
-	fclose(yyin);
-	fclose(fout);
-	return 0;
-}
 
 void yyerror(char *s){
 	fprintf(stderr, "%s\n", s);
