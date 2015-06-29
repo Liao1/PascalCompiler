@@ -401,15 +401,15 @@ public:
   FunctionAST* ErrorF(const char * str) {Error(str); return 0;}
 };
 
-class AstContext{
-    AstContext *parent;
+class CodeGenContext{
+    CodeGenContext *parent;
     map<string, Type*> typeTable;
     map<string, FunctionAST*> functionTable;
-    map<string, Value*> varTable;
+    map<string, Value*> locals;
 public:
     FunctionAST *currentFunc;
 
-    AstContext(AstContext *parent=NULL):parent(parent){
+    CodeGenContext(CodeGenContext *parent=NULL):parent(parent){
         if(parent != NULL){
             currentFunc = parent->currentFunc;
         }else{

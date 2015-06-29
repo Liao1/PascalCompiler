@@ -7,10 +7,7 @@ using namespace llvm;
 
 Value* ConstAST::Codegen(CodeGenContext& context)  //by ly
 {
-	string variableName;
-	BasicTypeAST* type;
-	constValue value;
-
+	
 }
 Value* SelfdefineTypeAST::Codegen(CodeGenContext& context)	//by ly
 {
@@ -28,24 +25,24 @@ Value* VariableDeclAST::Codegen(CodeGenContext& context)
 {
 		for(int i = 0; i < variableName.size(); i++)
 	{
-        if (type->type == basic)
+        if (type->type == INTEGER)
         {
-	        if (type->type->type == INTEGER)
-	        {
-				auto alloc = new llvm::AllocaInst(Type::getInt32Ty(llvm::getGlobalContext()), this->variableName[i].c_str(), context.currentBlock());
-			    context.locals()[this->variableName[i]] = alloc;	
-	        }
-	        else if (type->type->type == REAL)
-	        {
-				auto alloc = new llvm::AllocaInst(Type::getDoubleTy(llvm::getGlobalContext()), this->variableName[i].c_str(), context.currentBlock());
-			    context.locals()[this->variableName[i]] = alloc;	
-	        }
-	        else if (type->type->type == BOOL)
-	        {
-				auto alloc = new llvm::AllocaInst(Type::getInt32Ty(llvm::getGlobalContext()), this->variableName[i].c_str(), context.currentBlock());
-			    context.locals()[this->variableName[i]] = alloc;	
-	        }	
-        }        
+			auto alloc = new llvm::AllocaInst(Type::getInt32Ty(llvm::getGlobalContext()), this->variableName[i].c_str(), context.currentBlock());
+		    Builder.CreateStore(this->variableName[i].c_str(), alloc);        	
+		    context.locals()[this->variableName[i]] = alloc;	
+        }
+        else if (type->type == REAL)
+        {
+			auto alloc = new llvm::AllocaInst(Type::getDoubleTy(llvm::getGlobalContext()), this->variableName[i].c_str(), context.currentBlock());
+		    Builder.CreateStore(this->variableName[i].c_str(), alloc);        	
+		    context.locals()[this->variableName[i]] = alloc;	
+        }
+        else if (type->type == BOOL)
+        {
+			auto alloc = new llvm::AllocaInst(Type::getInt32Ty(llvm::getGlobalContext()), this->variableName[i].c_str(), context.currentBlock());
+		   	Builder.CreateStore(this->variableName[i].c_str(), alloc);        	
+		    context.locals()[this->variableName[i]] = alloc;	
+        }	
 	}
     return alloc;
 
@@ -71,9 +68,15 @@ Value* BoolExprAST::Codegen(CodeGenContext& context)
 }
 Value* StringExprAST::Codegen(CodeGenContext& context)	//by ly
 {
+	cout << "Creating string: " << val << endl;
+	return builder.CreateGlobalStringPtr(val);
 }
 Value* CharExprAST::Codegen(CodeGenContext& context)	//by ly
 {
+	cout << "Create char: " << val << endl;
+	string s = "";
+	s = s + val;
+	return builder.CreateGlobalStringPtr(s);
 }
 Value* VariableExprAST::Codegen(CodeGenContext& context)
 {  
@@ -95,33 +98,25 @@ Value* UnaryExprAST::Codegen(CodeGenContext& context)
 }
 Value* BinaryExprAST::Codegen(CodeGenContext& context)
 {
+	  Value *L = LExpr->Codegen();
+	  Value *R = RExpr->Codegen();
+	  if (L == 0 || R == 0) return 0;
+	  case '+': return builder.CreateFAdd(L, R, "addtmp");
+	  case '-': return builder.CreateFSub(L, R, "subtmp");
+	  case '*': return builder.CreateFMul(L, R, "multmp");
+	  case '<':
+	    L = builder.CreateFCmpULT(L, R, "cmptmp");
+	    // Convert bool 0/1 to double 0.0 or 1.0
+	    return builder.CreateUIToFP(L, Type::getDoubleTy(getGlobalContext()),"booltmp");
+	  }
 
 	std::cout << "Creating binary operation " << op << std::endl;
-	Instruction::BinaryOps instr;
-	switch (op) 
-	{
-		case : 	    instr = Instruction::FAdd; goto math;
-		case : 	    instr = Instruction::FSub; goto math;
-		case : 		instr = Instruction::FMul; goto math;
-		case : 		instr = Instruction::SDiv; goto math;
-		case : 		instr = Instruction::FCmpULT; goto math;		
-		// case '>': 		instr = Instruction::SDiv; goto math;
-		// case '=': 		instr = Instruction::SDiv; goto math;
-		// case '%': 		instr = Instruction::SDiv; goto math;
-		// case '&': 		instr = Instruction::SDiv; goto math;
-		// case '|': 		instr = Instruction::SDiv; goto math;
-		// case '^': 		instr = Instruction::SDiv; goto math;
-		/* TODO comparison */
-	}
 	if (op == plus_kind)
 	{
-		instr = Instruction::Add;		
-		return BinaryOperator::Create(instr, LExpr->Codegen(context), RExpr->Codegen(context), "", context.currentBlock());
-	}
+		return builder.CreateFAdd(L, R, "addtmp");	}
 	else if (op == minus_kind)
 	{
-		instr = Instruction::Sub;
-		return BinaryOperator::Create(instr, LExpr->Codegen(context), RExpr->Codegen(context), "", context.currentBlock());
+		return builder.CreateFSub(L, R, "subtmp");
 	}
 	else if (op == or_kind)
 	{
@@ -129,13 +124,11 @@ Value* BinaryExprAST::Codegen(CodeGenContext& context)
 	}
 	else if (op == mul_kind)
 	{
-		instr = Instruction::Mul;
-		return BinaryOperator::Create(instr, LExpr->Codegen(context), RExpr->Codegen(context), "", context.currentBlock());
+		return builder.CreateFMul(L, R, "multmp");
 	}
 	else if (op == div_kind)
 	{
-		instr = Instruction::SDiv;
-		return BinaryOperator::Create(instr, LExpr->Codegen(context), RExpr->Codegen(context), "", context.currentBlock());
+		return builder.CreateSDiv(L, R, "divtmp");	
 	}
 	else if (op == mod_kind)
 	{
@@ -159,6 +152,9 @@ Value* BinaryExprAST::Codegen(CodeGenContext& context)
 	}
 	else if (op == lt_kind)
 	{
+	    L = builder.CreateFCmpULT(L, R, "cmptmp");
+	    // Convert bool 0/1 to double 0.0 or 1.0
+	    return builder.CreateUIToFP(L, Type::getDoubleTy(getGlobalContext()),"booltmp");
 
 	}
 	else if (op == eq_kind)
@@ -175,14 +171,14 @@ Value* BinaryExprAST::Codegen(CodeGenContext& context)
 	        throw std::domain_error("Undeclared variable " + LExpr->name);
 	        return nullptr;
 	    }
-	    return new llvm::StoreInst(RExpr->CodeGen(context), context.locals()[LExpr->name], false, context.currentBlock());
+	    return builder.CreateStore(RExpr->Codegen(context),context.locals()[LExpr->name]);
 	}
 	return NULL;
 
 }
 Value* CallExprAST::Codegen(CodeGenContext& context)
 {
-	  Function *CalleeF = TheModule->getFunction(callee);
+	  Function *CalleeF = module->getFunction(callee);
 	  if (CalleeF == 0)
 	    return ErrorV("Unknown function referenced");
 	  
@@ -196,7 +192,7 @@ Value* CallExprAST::Codegen(CodeGenContext& context)
 	    if (ArgsV.back() == 0) return 0;
 	  }
 	  
-	  return Builder.CreateCall(CalleeF, ArgsV, "calltmp");
+	  return builder.CreateCall(CalleeF, ArgsV, "calltmp");
 
 }
 Value* IfExprAST::Codegen(CodeGenContext& context)
@@ -206,10 +202,10 @@ Value* IfExprAST::Codegen(CodeGenContext& context)
 	    return 0;
 
 	  // Convert condition to a bool by comparing equal to 0.0.
-	  CondV = Builder.CreateFCmpONE(
+	  CondV = builder.CreateFCmpONE(
 	      CondV, ConstantFP::get(getGlobalContext(), APFloat(0.0)), "ifcond");
 
-	  Function *TheFunction = Builder.GetInsertBlock()->getParent();
+	  Function *TheFunction = builder.GetInsertBlock()->getParent();
 
 	  // Create blocks for the then and else cases.  Insert the 'then' block at the
 	  // end of the function.
@@ -218,36 +214,36 @@ Value* IfExprAST::Codegen(CodeGenContext& context)
 	  BasicBlock *ElseBB = BasicBlock::Create(getGlobalContext(), "else");
 	  BasicBlock *MergeBB = BasicBlock::Create(getGlobalContext(), "ifcont");
 
-	  Builder.CreateCondBr(CondV, ThenBB, ElseBB);
+	  builder.CreateCondBr(CondV, ThenBB, ElseBB);
 
 	  // Emit then value.
-	  Builder.SetInsertPoint(ThenBB);
+	  builder.SetInsertPoint(ThenBB);
 
 	  Value *ThenV = thenComponent->Codegen(context);
 	  if (ThenV == 0)
 	    return 0;
 
-	  Builder.CreateBr(MergeBB);
+	  builder.CreateBr(MergeBB);
 	  // Codegen of 'Then' can change the current block, update ThenBB for the PHI.
-	  ThenBB = Builder.GetInsertBlock();
+	  ThenBB = builder.GetInsertBlock();
 
 	  // Emit else block.
 	  TheFunction->getBasicBlockList().push_back(ElseBB);
-	  Builder.SetInsertPoint(ElseBB);
+	  builder.SetInsertPoint(ElseBB);
 
 	  Value *ElseV = elseComponent->Codegen(context);
 	  if (ElseV == 0)
 	    return 0;
 
-	  Builder.CreateBr(MergeBB);
+	  builder.CreateBr(MergeBB);
 	  // Codegen of 'Else' can change the current block, update ElseBB for the PHI.
-	  ElseBB = Builder.GetInsertBlock();
+	  ElseBB = builder.GetInsertBlock();
 
 	  // Emit merge block.
 	  TheFunction->getBasicBlockList().push_back(MergeBB);
-	  Builder.SetInsertPoint(MergeBB);
+	  builder.SetInsertPoint(MergeBB);
 	  PHINode *PN =
-	      Builder.CreatePHI(Type::getDoubleTy(getGlobalContext()), 2, "iftmp");
+	      builder.CreatePHI(Type::getDoubleTy(getGlobalContext()), 2, "iftmp");
 
 	  PN->addIncoming(ThenV, ThenBB);
 	  PN->addIncoming(ElseV, ElseBB);
@@ -262,19 +258,19 @@ Value* ForExprAST::Codegen(CodeGenContext& context)
 
 	  // Make the new basic block for the loop header, inserting after current
 	  // block.
-	  Function *TheFunction = Builder.GetInsertBlock()->getParent();
-	  BasicBlock *PreheaderBB = Builder.GetInsertBlock();
+	  Function *TheFunction = builder.GetInsertBlock()->getParent();
+	  BasicBlock *PreheaderBB = builder.GetInsertBlock();
 	  BasicBlock *LoopBB =
 	      BasicBlock::Create(getGlobalContext(), "loop", TheFunction);
 
 	  // Insert an explicit fall through from the current block to the LoopBB.
-	  Builder.CreateBr(LoopBB);
+	  builder.CreateBr(LoopBB);
 
 	  // Start insertion in LoopBB.
-	  Builder.SetInsertPoint(LoopBB);
+	  builder.SetInsertPoint(LoopBB);
 
 	  // Start the PHI node with an entry for Start.
-	  PHINode *Variable = Builder.CreatePHI(Type::getDoubleTy(getGlobalContext()),
+	  PHINode *Variable = builder.CreatePHI(Type::getDoubleTy(getGlobalContext()),
 	                                        2, varName.c_str());
 	  Variable->addIncoming(StartVal, PreheaderBB);
 
@@ -292,7 +288,7 @@ Value* ForExprAST::Codegen(CodeGenContext& context)
 	  // Emit the step value.
 	  Value *StepVal;
 	  StepVal = ConstantFP::get(getGlobalContext(), APFloat(1.0));
-	  Value *NextVar = Builder.CreateFAdd(Variable, StepVal, "nextvar");
+	  Value *NextVar = builder.CreateFAdd(Variable, StepVal, "nextvar");
 
 	  // Compute the end condition.
 	  Value *EndCond = end->Codegen(context);
@@ -300,19 +296,19 @@ Value* ForExprAST::Codegen(CodeGenContext& context)
 	    return EndCond;
 
 	  // Convert condition to a bool by comparing equal to 0.0.
-	  EndCond = Builder.CreateFCmpONE(
+	  EndCond = builder.CreateFCmpONE(
 	      EndCond, ConstantFP::get(getGlobalContext(), APFloat(0.0)), "loopcond");
 
 	  // Create the "after loop" block and insert it.
-	  BasicBlock *LoopEndBB = Builder.GetInsertBlock();
+	  BasicBlock *LoopEndBB = builder.GetInsertBlock();
 	  BasicBlock *AfterBB =
 	      BasicBlock::Create(getGlobalContext(), "afterloop", TheFunction);
 
 	  // Insert the conditional branch into the end of LoopEndBB.
-	  Builder.CreateCondBr(EndCond, LoopBB, AfterBB);
+	  builder.CreateCondBr(EndCond, LoopBB, AfterBB);
 
 	  // Any new code will be inserted in AfterBB.
-	  Builder.SetInsertPoint(AfterBB);
+	  builder.SetInsertPoint(AfterBB);
 
 	  // Add a new entry to the PHI node for the backedge.
 	  Variable->addIncoming(NextVar, LoopEndBB);
@@ -340,7 +336,7 @@ Function* PrototypeAST::Codegen(CodeGenContext& context)
     FunctionType *FT = FunctionType::get(Type::getDoubleTy(getGlobalContext()),
                                        Doubles, false);
     
-    Function *F = Function::Create(FT, Function::ExternalLinkage, Name, TheModule);
+    Function *F = Function::Create(FT, Function::ExternalLinkage, Name, module);
   
     // If F conflicted, there was already something named 'Name'.  If it has a
     // body, don't allow redefinition or reextern.
@@ -348,7 +344,7 @@ Function* PrototypeAST::Codegen(CodeGenContext& context)
     {
     // Delete the one we just made and get the existing one.
     F->eraseFromParent();
-    F = TheModule->getFunction(Name);
+    F = module->getFunction(Name);
     
     // If F already has a body, reject this.
     if (!F->empty()) 
@@ -372,7 +368,7 @@ Function* PrototypeAST::Codegen(CodeGenContext& context)
     AI->setName(Args[Idx]);
     
     // Add arguments to variable symbol table.
-    NamedValues[Args[Idx]] = AI;
+    context.locals[Args[Idx]] = AI;
   }
   
   return F;
@@ -380,19 +376,19 @@ Function* PrototypeAST::Codegen(CodeGenContext& context)
 }
 Function* FunctionAST::Codegen(CodeGenContext& context)
 {
-	  NamedValues.clear();
+	  context.locals.clear();
   
-	  Function *TheFunction = Proto->Codegen();
+	  Function *TheFunction = proto->Codegen();
 	  if (TheFunction == 0)
 	    return 0;
 	  
 	  // Create a new basic block to start insertion into.
 	  BasicBlock *BB = BasicBlock::Create(getGlobalContext(), "entry", TheFunction);
-	  Builder.SetInsertPoint(BB);
+	  builder.SetInsertPoint(BB);
 	  
-	  if (Value *RetVal = Body->Codegen()) {
+	  if (Value *RetVal = body->Codegen()) {
 	    // Finish off the function.
-	    Builder.CreateRet(RetVal);
+	    builder.CreateRet(RetVal);
 
 	    // Validate the generated code, checking for consistency.
 	    verifyFunction(*TheFunction);
@@ -408,7 +404,7 @@ Function* FunctionAST::Codegen(CodeGenContext& context)
 Value* ProgramAST::Codegen(CodeGenContext& context)
 {
 	
-	llvm::Value* last = nullptr;    
+	Value* last = nullptr;    
 	for(int i = 0; i < consts.size())) {
         last = records[i]->Codegen(context);
     }
