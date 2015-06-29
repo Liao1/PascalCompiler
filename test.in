@@ -1,0 +1,50 @@
+program test1;
+const
+	aa=10;
+	bb="123";
+	cc=true;
+	dd=1.1;
+	ee='a';
+type
+	TreeNode = record
+		a:integer;
+		b:real;
+		c:string;
+		d:char;
+		e:boolean;
+	end;
+	A = integer;
+var
+	a, b, c, i: integer;
+	p, q:TreeNode;
+	d:array[1..10] of integer;
+	e:array[5..15] of boolean;
+
+function gcd(a:integer; b:integer):integer;
+begin
+	if (b=0) then gcd:=a
+	else gcd:=gcd(b, a mod b);
+end;
+
+begin
+	read(a);
+	read(b);
+	q.b:=b;
+	p.a:=0;
+	for i:=1 to 10 do
+		p.a:=p.a+i;
+	p.a:=0;
+	i:=10;
+	while (i>0) do
+	begin
+		p.a:=p.a+i;
+	end;
+	p.a:=0;
+	i:=1;
+	repeat
+		p.a:=p.a+i;
+		i:=i+1;
+	until (i=10);
+	c:=gcd(a,b);
+	write(c);
+end.
