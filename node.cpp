@@ -35,7 +35,7 @@ Value* ConstAST::Codegen(CodeGenContext& context)  //by ly
 	v.push_back(variableName);
 	VariableDeclAST variabledecl = VariableDeclAST(type, v);
 	variabledecl->Codegen();//定义对应类型的变量
-	return builder.CreateStore(constVal, context.locals()[variableName]);//对变量进行赋值
+	return builder.CreateStore(constVal, context.locals.find(variableName)->second);//对变量进行赋值
 }
 Value* SelfdefineTypeAST::Codegen(CodeGenContext& context)	//by ly
 {
@@ -55,21 +55,21 @@ Value* VariableDeclAST::Codegen(CodeGenContext& context)
 	{
         if (type->type == INTEGER)
         {
-			auto alloc = new llvm::AllocaInst(Type::getInt32Ty(llvm::getGlobalContext()), this->variableName[i].c_str(), context.currentBlock());
+			auto alloc = new llvm::AllocaInst(Type::getInt32Ty(llvm::getGlobalContext()), this->variableName[i].c_str());
 		    Builder.CreateStore(this->variableName[i].c_str(), alloc);        	
-		    context.locals()[this->variableName[i]] = alloc;	
+		    context.locals.find(this->variableName[i])->second = alloc;	
         }
         else if (type->type == REAL)
         {
-			auto alloc = new llvm::AllocaInst(Type::getDoubleTy(llvm::getGlobalContext()), this->variableName[i].c_str(), context.currentBlock());
+			auto alloc = new llvm::AllocaInst(Type::getDoubleTy(llvm::getGlobalContext()), this->variableName[i].c_str());
 		    Builder.CreateStore(this->variableName[i].c_str(), alloc);        	
-		    context.locals()[this->variableName[i]] = alloc;	
+		    context.locals.find(this->variableName[i])->second = alloc;	
         }
         else if (type->type == BOOL)
         {
-			auto alloc = new llvm::AllocaInst(Type::getInt32Ty(llvm::getGlobalContext()), this->variableName[i].c_str(), context.currentBlock());
+			auto alloc = new llvm::AllocaInst(Type::getInt32Ty(llvm::getGlobalContext()), this->variableName[i].c_str());
 		   	Builder.CreateStore(this->variableName[i].c_str(), alloc);        	
-		    context.locals()[this->variableName[i]] = alloc;	
+		    context.locals.find(this->variableName[i])->second = alloc;	
         }	
 	}
     return alloc;
@@ -129,14 +129,6 @@ Value* BinaryExprAST::Codegen(CodeGenContext& context)
 	  Value *L = LExpr->Codegen();
 	  Value *R = RExpr->Codegen();
 	  if (L == 0 || R == 0) return 0;
-	  case '+': return builder.CreateFAdd(L, R, "addtmp");
-	  case '-': return builder.CreateFSub(L, R, "subtmp");
-	  case '*': return builder.CreateFMul(L, R, "multmp");
-	  case '<':
-	    L = builder.CreateFCmpULT(L, R, "cmptmp");
-	    // Convert bool 0/1 to double 0.0 or 1.0
-	    return builder.CreateUIToFP(L, Type::getDoubleTy(getGlobalContext()),"booltmp");
-	  }
 
 	std::cout << "Creating binary operation " << op << std::endl;
 	if (op == plus_kind)
@@ -371,11 +363,12 @@ Value* FunctionAST::Codegen(CodeGenContext& context)
     auto f_type = llvm::FunctionType::get(this->isProcedure() ? llvm::Type::getVoidTy(llvm::getGlobalContext()) : llvm::Type::getInt32Ty(llvm::getGlobalContext()), llvm::makeArrayRef(arg_types), false);
     else
     auto f_type = llvm::FunctionType::get(this->isProcedure() ? llvm::Type::getVoidTy(llvm::getGlobalContext()) : llvm::Type::getVoidTy(llvm::getGlobalContext()), llvm::makeArrayRef(arg_types), false);
-    auto function = llvm::Function::Create(f_type, llvm::GlobalValue::InternalLinkage, this->name.c_str(), context.module);
-    auto block = llvm::BasicBlock::Create(getGlobalContext(), "entry", function, 0);
+    auto function = llvm::Function::Create(f_type, llvm::GlobalValue::InternalLinkage, this->name.c_str(), module);
+  //  auto block = llvm::BasicBlock::Create(getGlobalContext(), "entry", function, 0);
+	builder.SetInsertPoint(BasicBlock::Create(context,"entry",function));
 
     // push block and start routine
-    context.pushBlock(block);
+   // context.pushBlock(block);
 
     // deal with arguments
     llvm::Value* arg_value;    
@@ -394,9 +387,9 @@ Value* FunctionAST::Codegen(CodeGenContext& context)
     if (this->isFunction()) {
         std::cout << "Creating function return value declaration" << std::endl;
         if (this->returnType->type == INTEGER) 
-        auto alloc = new llvm::AllocaInst(Type::getInt32Ty(llvm::getGlobalContext()), this->name.c_str(), context.currentBlock());
+        auto alloc = new llvm::AllocaInst(Type::getInt32Ty(llvm::getGlobalContext()), this->name.c_str());
 		else
-		auto alloc = new llvm::AllocaInst(Type::getVoidTy(llvm::getGlobalContext()), this->name.c_str(), context.currentBlock());
+		auto alloc = new llvm::AllocaInst(Type::getVoidTy(llvm::getGlobalContext()), this->name.c_str());
 		Builder.CreateStore(this->name.c_str(), alloc);        	
         context.locals()[this->name] = alloc;
         // auto alloc = new llvm::AllocaInst(this->return_type->toLLVMType(), this->routine_name->name.c_str(), context.currentBlock());
@@ -419,19 +412,19 @@ Value* FunctionAST::Codegen(CodeGenContext& context)
     // return value
     if (this->isFunction()) {
         std::cout << "Generating return value for function" << std::endl;
-        auto load_ret = new llvm::LoadInst(context.locals()[this->name], "", false, context.currentBlock());
+        auto load_ret = new llvm::LoadInst(context.locals.find(this->name)->second, this->name);
        // llvm::ReturnInst::Create(llvm::getGlobalContext(), load_ret, block);
-        builder.CreateRet(llvm::getGlobalContext(), load_ret);
+        builder.CreateRet(load_ret);
     }
     else if(this->isProcedure()) {
         std::cout << "Generating return void for procedure" << std::endl;
-        builder.CreateRetVoid(llvm::getGlobalContext());
+        builder.CreateRetVoid();
      //   llvm::ReturnInst::Create(llvm::getGlobalContext(), block);
         
     }
 
     // pop block and finsh
-    context.popBlock();
+  //  context.popBlock();
   //  std::cout << "Creating " << this->toString() << ":" << this->routine_name->name << std::endl;
     return function;
 
