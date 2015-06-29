@@ -1,33 +1,30 @@
 %{
 	#include<stdio.h>
 	#include<string.h>
-	#include "AST.h"
+	#include "Global.h"
+	#include "SyntaxTree.h"
+	#include "SymbolTable.h"
+	#include "TypeChecking.h"
+	int lineNo;
+	FILE *fout;
+	TreeNode *root;
+	SymbolTable *SymTab;
 %}
 %union{
 	int intValue;
 	char charValue;
-	Node *treeNode;
-	double floatValue;
+	TreeNode *treeNode;
+	float floatValue;
 	char strValue[256];
-	vector<ExprAST *> exprlist;
-	vector<ConstAST *> constlist;
-	vector<SelfdefineTypeAST *> typelist;
-	vector<VariableDeclAST *> varlist;
-	vector<FunctionAST *> funclist;
 }
-%type <treeNode> expression expr term factor const_value 
-%type <treeNode> stmt non_label_stmt assign_stmt proc_stmt if_stmt repeat_stmt while_stmt for_stmt goto_stmt compound_stmt case_stmt case_expr_list case_expr else_clause
-%type <treeNode> routine routine_head routine_body 
+%type <treeNode> expression_list expression expr term factor const_value args_list
+%type <treeNode> stmt_list stmt non_label_stmt assign_stmt proc_stmt if_stmt repeat_stmt while_stmt for_stmt goto_stmt compound_stmt case_stmt case_expr_list case_expr else_clause
+%type <treeNode> routine routine_head routine_body label_part const_part type_part var_part routine_part 
 %type <treeNode> const_expr_list type_decl_list type_definition type_decl simple_type_decl sys_type name_list
 %type <treeNode> array_type_decl record_type_decl field_decl_list field_decl 
 %type <treeNode> var_decl_list var_decl sub_routine function_decl function_head procedure_decl procedure_head
 %type <treeNode> parameters para_decl_list para_type_list var_para_list val_para_list
 %type <intValue> direction 
-%type <exprlist> args_list expression_list stmt_list
-%type <constlist> const_part
-%type <typelist> type_part
-%type <varlist> var_part
-%type <funclist> routine_part
 %token GE GT LE LT EQUAL UNEQUAL
 %token PLUS MINUS OR MUL DIV MOD AND NOT ASSIGN
 %token ID LP RP DOT COMMA LB RB SEMI COLON
@@ -43,23 +40,23 @@
 %%
 /*program derivation*/
 program:
-	program_head routine DOT	{ root =  }
+	program_head routine DOT	{ root = CreateProcHead("main", NULL); root->children[1] = $2; }
 	;
 program_head:
 	PROGRAM NAME SEMI	
 	;
 /*routine derivation*/
 routine:
-	routine_head routine_body	{ $$ = new FunctionAST(NULL, $1, $2); }
+	routine_head routine_body	{ $$ = CreateRoutine($1, $2); }
 	;
 routine_head:
-	label_part const_part type_part	var_part routine_part	{ $$ = new FunctionHeadAST($2, $3, $4, $5); }
+	label_part const_part type_part	var_part routine_part	{ $$ = ConnectNodes($1, ConnectNodes($2, ConnectNodes($3, ConnectNodes($4, $5)))); }
 	;
 sub_routine:
-	routine_head routine_body	{ $$ = new FunctionAST($1, $2); }
+	routine_head routine_body	{ $$ = CreateRoutine($1, $2); }
 	;
 /* label part*/
-label_part:	
+label_part:		{ $$ = NULL; }
 	;
 /* const part*/
 const_part:
@@ -67,9 +64,7 @@ const_part:
 	|	{ $$ = NULL; }
 	;
 const_expr_list:
-	const_expr_list NAME EQUAL const_value SEMI	{
-		$1.push_back(new ConstAST($2, ))
-		$$ = ConnectNodes($1, CreateConst($2, $4)); }
+	const_expr_list NAME EQUAL const_value SEMI	{ $$ = ConnectNodes($1, CreateConst($2, $4)); }
 	| NAME EQUAL const_value SEMI	{ $$ = CreateConst($1, $3); }
 	;
 /* type part*/
@@ -189,19 +184,12 @@ routine_body:
 	;
 /*stmt derivation*/
 stmt_list:
-	stmt_list stmt SEMI		{ 
-		for (int i=0; i<$2.size(); i++)
-			$1.push_back($2[i]);
-		$$ = $1; 
-	}
-	|		{ 
-		vector<ExprAST *> tmp;
-		$$ = tmp;
-	}
+	stmt_list stmt SEMI		{ $$ = ConnectNodes($1, $2); }
+	|		{ $$ = NULL; }
 	;
 stmt:
-	INTEGER COLON non_label_stmt	{ $$ = NULL; }
-	| non_label_stmt	{ $$.push_back($1); }
+	INTEGER COLON non_label_stmt	{ $$ = makeLabel($3, $1); }
+	| non_label_stmt	{ $$ = $1; }
 	;
 non_label_stmt:
 	assign_stmt		{ $$ = $1; }
@@ -210,56 +198,60 @@ non_label_stmt:
 	| repeat_stmt		{ $$ = $1; }
 	| while_stmt		{ $$ = $1; }
 	| for_stmt		{ $$ = $1; }
-	| case_stmt		{ $$ = NULL; }
-	| goto_stmt		{ $$ = NULL; }
+	| case_stmt		{ $$ = $1; }
+	| goto_stmt		{ $$ = $1; }
 	| compound_stmt		{ $$ = $1; }
 	;
 compound_stmt:
-	BEGINNING stmt_list END		{ $$ = new CompoundExprAST($2); }
+	BEGINNING stmt_list END		{ $$ = $2; }
 	;
 assign_stmt:
 	NAME ASSIGN expression 		{ 
-		$$ = new BinaryExprAST(
-			assignment_stmt, 
-			VariableExprAST($1),
-			$3
-			); 
+		$$ = CreateStmtNode(assign_stmt); 
+		$$->children[0] = CreateIdExp($1);
+		$$->children[1] = $3;
 	}
 	| NAME LB expression RB ASSIGN expression	{
-		$$ = new BinaryExprAST(
-			assignment_stmt,
-			ArrayVariableExprAST($1, $3),
-			$6
-			);
+		$$ = CreateStmtNode(assign_stmt);
+		$$->children[0] = CreateIdArrayExp($1, $3);
+		$$->children[1] = $6;
 	}
 	| NAME DOT NAME ASSIGN expression 	{
-		$$ = new BinaryExprAST(
-			assignment_stmt,
-			RecordVariableExprAST($1, VariableExprAST($3)),
-			$5
-			);
+		$$ = CreateStmtNode(assign_stmt);
+		$$->children[0] = CreateIdRecordExp($1, $3);
+		$$->children[1] = $5;
 	}
 	;
 proc_stmt:
 	NAME 	{ 
-		vector<ExprAST *> tmp;
-		$$ = new CallExprAST($1, tmp);
+		$$ = CreateStmtNode(proc_stmt);
+		strcpy($$->name, $1);
 	}
 	| NAME LP args_list RP	{
-		$$ = new CallExprAST($1, $3);
+		$$ = CreateStmtNode(proc_stmt);
+		$$->children[0] = $3;
+		strcpy($$->name, $1);
 	}
 	| SYS_PROC	{ $$ = NULL; }
 	| SYS_PROC LP expression_list RP	{
-		$$ = new CallExprAST($1, $3);
-		// $$->system = 1;
+		$$ = CreateStmtNode(proc_stmt);
+		$$->children[0] = $3;
+		strcpy($$->name, $1);
+		$$->system = 1;
 	}		
 	| READ LP factor RP {
-		$$ = new CallExprAST("read", $3);
+		$$ = CreateStmtNode(proc_stmt);
+		$$->children[0] = $3;
+		strcpy($$->name, "read");
+		$$->system = 1;
 	}
 	;
 if_stmt:
 	IF expression THEN stmt else_clause		{ 
-		$$ = new IfExprAST($2, $4, $5);
+		$$ = CreateStmtNode(if_stmt);
+		$$->children[0] = $2;
+		$$->children[1] = $4;
+		$$->children[2] = $5;
 	}
 	;
 else_clause:
@@ -268,17 +260,26 @@ else_clause:
 	;
 repeat_stmt:
 	REPEAT stmt_list UNTIL expression	{ 
-		$$ = new RepeatExprAST($4, $2);
+		$$ = CreateStmtNode(repeat_stmt);
+		$$->children[0] = $2;
+		$$->children[1] = $4;
 	}
 	;
 while_stmt:
 	WHILE expression DO stmt	{
-		$$ = new WhileExprAST($2, $4);
+		$$ = CreateStmtNode(while_stmt);
+		$$->children[0] = $2;
+		$$->children[1] = $4;
 	}
 	;
 for_stmt:
 	FOR NAME ASSIGN expression direction expression DO stmt		{
-		$$ = NULL;
+		$$ = CreateStmtNode(for_stmt);
+		strcpy($$->name, $2);
+		$$->children[0] = $4;
+		$$->children[1] = $6;
+		$$->children[2] = $8;
+		$$->attr.intVal = $5;
 	}
 	;
 direction:
@@ -287,141 +288,157 @@ direction:
 	;
 case_stmt:
 	CASE expression OF case_expr_list END	{
-		$$ = NULL;
+		$$ = CreateStmtNode(case_stmt);
+		$$->children[0] = $2;
+		$$->children[1] = $4;
 	}
 	;
 case_expr_list:
-	case_expr_list case_expr	{ $$ = NULL; }
-	| case_expr		{ $$ = NULL; }
+	case_expr_list case_expr	{ $$ = ConnectNodes($1, $2); }
+	| case_expr		{ $$ = $1; }
 	;
 case_expr:
 	const_value COLON stmt SEMI	{ 
-		$$ = NULL
+		$$ = CreateStmtNode(case_exp_stmt);
+		$$->children[0] = $1;
+		$$->children[1] = $3;
 	}
 	| NAME COLON stmt SEMI		{
-		$$ = NULL
+		$$ = CreateStmtNode(case_exp_stmt);
+		$$->children[0] = CreateIdExp($1);
+		$$->children[1] = $3;
 	}
 	;
 goto_stmt:
 	GOTO INTEGER		{
-		$$ = NULL;
+		$$ = CreateStmtNode(goto_stmt);
+		$$->attr.intVal = $2;
 	}
 	;
 /*expression derivation*/
 expression_list:
-	expression_list COMMA expression 	{ 
-		$1.push_back($3); 
-		$$=$1;
-	}
-	| expression	{ $$.push_back($1); }
+	expression_list COMMA expression 	{ $$ = ConnectNodes($1, $3); }
+	| expression	{ $$ = $1; }
 	;
 expression:
 	expression GE expr		{
-		$$ = new BinaryExprAST(ge_kind, $1, $3);
+		$$ = CreateOpExp(ge_kind);
+		$$->children[0] = $1;
+		$$->children[1] = $3;
 	}	
 	| expression GT expr 		{
-		$$ = new BinaryExprAST(gt_kind, $1, $3);
+		$$ = CreateOpExp(gt_kind);
+		$$->children[0] = $1;
+		$$->children[1] = $3;
 	}
 	| expression LE expr 		{
-		$$ = new BinaryExprAST(le_kind, $1, $3);
+		$$ = CreateOpExp(le_kind);
+		$$->children[0] = $1;
+		$$->children[1] = $3;
 	}
 	| expression LT expr 		{
-		$$ = new BinaryExprAST(lt_kind, $1, $3);
+		$$ = CreateOpExp(lt_kind);
+		$$->children[0] = $1;
+		$$->children[1] = $3;
 	}
 	| expression EQUAL expr		{
-		$$ = new BinaryExprAST(eq_kind, $1, $3);
+		$$ = CreateOpExp(eq_kind);
+		$$->children[0] = $1;
+		$$->children[1] = $3;
 	}
 	| expression UNEQUAL expr	{
-		$$ = new BinaryExprAST(ueq_kind, $1, $3);
+		$$ = CreateOpExp(ueq_kind);
+		$$->children[0] = $1;
+		$$->children[1] = $3;
 	}
 	| expr		{ $$ = $1; }
 	;
 expr:
 	expr PLUS term		{
-		$$ = new BinaryExprAST(plus_kind, $1, $3);
+		$$ = CreateOpExp(plus_kind);
+		$$->children[0] = $1;
+		$$->children[1] = $3;
 	}
 	| expr MINUS term	{
-		$$ = new BinaryExprAST(minus_kind, $1, $3);
+		$$ = CreateOpExp(minus_kind);
+		$$->children[0] = $1;
+		$$->children[1] = $3;
 	}
 	| expr OR term		{
-		$$ = new BinaryExprAST(or_kind, $1, $3);
+		$$ = CreateOpExp(or_kind);
+		$$->children[0] = $1;
+		$$->children[1] = $3;
 	}
 	| term		{ $$ = $1; }
 	;
 term:
 	term MUL factor		{ 
-		$$ = new BinaryExprAST(mul_kind, $1, $3);
+		$$ = CreateOpExp(mul_kind);
+		$$->children[0] = $1;
+		$$->children[1] = $3;
 	}
 	| term DIV factor	{ 
-		$$ = new BinaryExprAST(div_kind, $1, $3);
+		$$ = CreateOpExp(div_kind);
+		$$->children[0] = $1;
+		$$->children[1] = $3;
 	}
 	| term MOD factor	{ 
-		$$ = new BinaryExprAST(mod_kind, $1, $3);
+		$$ = CreateOpExp(mod_kind);
+		$$->children[0] = $1;
+		$$->children[1] = $3;
 	}
 	| term AND factor	{ 
-		$$ = new BinaryExprAST(and_kind, $1, $3);
+		$$ = CreateOpExp(and_kind);
+		$$->children[0] = $1;
+		$$->children[1] = $3;
 	}
 	| factor	{ $$ = $1; }
 	;
 factor:
-	NAME		{ 
-		//$$ = new VariableExprAST($1); 
-	}
-	| NAME LP args_list RP		{ 
-		//$$ = new CallExprAST($1, $3); 
-	}
-	| SYS_FUNCT	{ 
-		//$$ = NULL; 
-	}
+	NAME		{ $$ = CreateIdExp($1); }
+	| NAME LP args_list RP		{ $$ = CreateFuncExp($1, $3); }
+	| SYS_FUNCT	{ $$ = NULL; }
 	| SYS_FUNCT LP args_list RP	{
-		//$$ = new CallExprAST($1, $3);
-		//$$->system = 1;
+		$$ = CreateFuncExp($1, $3);
+		$$->system = 1;
 	}
-	| const_value	{ 
-		//$$ = $1; 
-	}
+	| const_value	{ $$ = $1; }
 	| NOT factor	{
-		//$$ = new CreateOpExp(not_kind, $2);
+		$$ = CreateOpExp(not_kind);
+		$$->children[0] = $2;
 	}
 	| MINUS factor	{
-		//$$ = new UnaryExprAST(neg_kind, $2);
+		$$ = CreateOpExp(neg_kind);
+		$$->children[0] = $2;
 	}
-	| LP expression RP { 
-		//$$ = $2; 
-	}
-	| NAME LB expression RB		{ 
-		//$$ = new ArrayVariableExprAST($1, $3); 
-	}
-	| NAME DOT NAME	{ 
-		//$$ = new VariableExprAST($1, new VariableExprAST($3); 
-	}
+	| LP expression RP { $$ = $2; }
+	| NAME LB expression RB		{ $$ = CreateIdArrayExp($1, $3); }
+	| NAME DOT NAME	{ $$ = CreateIdRecordExp($1, $3); }
 	;
 args_list:
-	args_list COMMA expression	{ 
-		//$1.push_back($3); 
-		//$$=$1; 
-	}
-	| expression 	{ 
-		//$$.push_back($1);
-	}
+	args_list COMMA expression	{ $$ = ConnectNodes($1, $3); }
+	| expression 	{ $$ = $1; }
 	;
 const_value:
 	INTEGER		{ 
-		$$ = new NumberExprAST($1);
+		$$ = CreateConstExp(integer_type);
+		$$->attr.intVal = $1;
 	}
 	| REAL		{
-		$$ = new RealExprAST($1);
+		$$ = CreateConstExp(real_type);
+		$$->attr.realVal = $1;
 	}
 	| CHAR		{
-		$$ = new CharExprAST($1);
+		$$ = CreateConstExp(char_type);
+		$$->attr.intVal = $1;
 	}
 	| STRING	{
-		char strVal[256];
-		strCatch(strVal, $1);
-		$$ = new StringExprAST($1);
+		$$ = CreateConstExp(string_type);
+		strCatch($$->attr.strVal, $1);
 	}
 	| BOOLEAN	{
-		$$ = new BoolExprAST($1);
+		$$ = CreateConstExp(boolean_type);
+		$$->attr.intVal = $1;
 	}
 	;
 %%
@@ -431,7 +448,17 @@ int main(int argc, char *argv[]){
 	lineNo = 1;
 	/* parsing tree */
 	yyparse();
-	/* end */
+	/* symbol table */
+	BuildSymTab();
+	//print_symtab(SymTab);
+	/* type checking*/
+	TypeChecking(root);
+	/* print tree */
+	fprintf(fout, "root");
+	if (!root) printf("null\n");
+	print_tree(root, 1);
+	//GenerateCode("Code.ll", root);
+	/* = = = = = = = = = */
 	fclose(yyin);
 	fclose(fout);
 	return 0;
