@@ -7,10 +7,35 @@ using namespace llvm;
 
 Value* ConstAST::Codegen(CodeGenContext& context)  //by ly
 {
-	string variableName;
-	BasicTypeAST* type;
-	constValue value;
+	Value* constVal;
 
+	if (type->type == INTEGER) {
+		NumberExprAST n = NumberExprAST(value.i);
+		n.type = Number;
+		constVal = n->Codegen(context);//生成对应常量
+	} else if (type->type == REAL) {
+		RealExprAST r = RealExprAST(value.r);
+		r.type = Real;
+		constVal = r->Codegen(context);
+	} else if (type->type == BOOL) {
+		BoolExprAST b = BoolExprAST(value.b);
+		b.type = Bool;
+		constVal = b->Codegen(context);
+	} else if (type->type == STRING) {
+		StringExprAST s = StringExprAST(value.s);
+		s.type = String;
+		constVal = s->Codegen(context);
+	} else if (type->type == CHAR) {
+		CharExprAST c = CharExprAST(value.c);
+		c.type = Char;
+		constVal = s->Codegen(context);
+	}
+
+	std::vector<string> v;
+	v.push_back(variableName);
+	VariableDeclAST variabledecl = VariableDeclAST(type, v);
+	variabledecl->Codegen();//定义对应类型的变量
+	return builder.CreateStore(constVal, context.locals()[variableName]);//对变量进行赋值
 }
 Value* SelfdefineTypeAST::Codegen(CodeGenContext& context)	//by ly
 {
@@ -71,9 +96,15 @@ Value* BoolExprAST::Codegen(CodeGenContext& context)
 }
 Value* StringExprAST::Codegen(CodeGenContext& context)	//by ly
 {
+	cout << "Creating string: " << val << endl;
+	return builder.CreateGlobalStringPtr(val);
 }
 Value* CharExprAST::Codegen(CodeGenContext& context)	//by ly
 {
+	cout << "Create char: " << val << endl;
+	string s = "";
+	s = s + val;
+	return builder.CreateGlobalStringPtr(s);
 }
 Value* VariableExprAST::Codegen(CodeGenContext& context)
 {  

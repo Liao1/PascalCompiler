@@ -185,7 +185,7 @@ class VariableDeclAST : public Node{
 public:
 	TypeAST *type;
 	std::vector<string> variableName;
-	VariableDeclAST(const string t, std::vector<string> v):type(t), variableName(v){}
+	VariableDeclAST(TypeAST *t, std::vector<string> v):type(t), variableName(v){}
 	Value* Codegen(CodeGenContext& context) override;
 	VariableDeclAST* ErrorN(const char *str){Error(str); return 0;}
 };
