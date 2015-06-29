@@ -1,3 +1,6 @@
+#ifndef Node_H
+#define Node_H
+
 #include <SyntaxTree.h>
 #include <vector>
 #include <llvm/IR/Value.h>
@@ -11,6 +14,25 @@
 #include <llvm/IR/Instructions.h>
 #include <llvm/IR/IRBuilder.h>
 
+class constValue;
+class Node;
+class ExprAST;
+class TypeAST;
+class NumberExprAST;
+class RealExprAST;
+class BoolExprAST;
+class CharExprAST;
+class StringExprAST;
+class BasicTypeAST;
+class ConstAST;
+class VariableDeclAST;
+class VariableExprAST;
+class UnaryExprAST;
+class BinaryExprAST;
+class CallExprAST;
+class FunctionAST;
+class CodeGenContext;
+
 using namespace std;
 using namespace llvm;
 
@@ -19,7 +41,7 @@ extern IRBuilder<> builder;
 extern Module module;
 extern Function *startFunc;
 extern string errorMsg;
-extern Program *program;
+extern Node *program;
 
 extern Value* createCast(Value *value,Type *type);
 extern Constant* getInitial(Type *type);
@@ -27,6 +49,7 @@ extern void throwError(Node *node);
 extern void throwWarning(Node *node,string msg);
 extern string getOperatorName(int op);
 extern string getTypeName(Type *type);
+
 
 //二元表达式集合
 typedef enum {
@@ -53,19 +76,22 @@ typedef enum  {
 } UnaryOpKind;
 
 //const值类型
-union constValue {
-	integer i;
+class constValue {
+public:
+	int i;
 	double d;
 	char c;
 	string s;
 	bool b;
+	constValue() {}
+	constValue(const constValue &f):i(f.i), d(f.d), c(f.c), s(f.s), b(f.b){}
 };
 
 //TypeAST中用来标记是哪种类型
 typedef enum {  
-	basic,
-	array,
-	self
+	basic_kind,
+	array_kind,
+	self_kind
 } TypeName;
 
 //SelfdefineTypeAST中用来标记类型
@@ -76,19 +102,19 @@ typedef enum {
 
 //BasicTypeAST中的物种基础类型
 typedef enum {  
-	INTEGER,
-	STRING,
-	REAL,
-	CHAR,
-	BOOL
+	Integer,
+	String,
+	Real,
+	Char,
+	Bool
 } BasicType;
 
 typedef enum {  
-	Number,
-	Real,
-	Bool,
-	String,
-	Char,
+	NumberExpr,
+	RealExpr,
+	BoolExpr,
+	StringExpr,
+	CharExpr,
 	Variable,
 	ArrayVariable,
 	RecordVariable,
@@ -103,9 +129,99 @@ typedef enum {
 
 class Node {
 public:
+	Node(){}
 	virtual ~Node(){}
 	virtual Value* Codegen(CodeGenContext& context);
-	TypeAST* Error(const char *str){fprintf(stderr, "%s\n", str); return 0;}
+	virtual void print(int i) = 0;
+	// TypeAST* Error(const char *str){fprintf(stderr, "%s\n", str); return 0;}
+};
+
+//所有表达式类的基类
+class ExprAST : public Node{
+public:
+	ExprType type;
+	ExprAST(){}
+	// ExprAST* ErrorE(const char *str){Error(str); return 0;}//这里设置返回，是为了报错时可以扩展为定位到节点而不是简单出现错误信息
+};
+
+//所有类型类的基类
+class TypeAST : public Node{
+public:
+	TypeAST(){}
+	virtual void print(int i) = 0;
+	//TypeName type;
+	// TypeAST* ErrorT(const char *str){Error(str); return 0;}
+};
+
+//整数常数表达式，如“1”
+class NumberExprAST : public ExprAST {
+public:
+	int val;
+	NumberExprAST(int value):val(value){}
+	NumberExprAST(const NumberExprAST &f):val(f.val){}
+	Value* Codegen(CodeGenContext &context) override;
+	void print(int n) override;
+	// NumberExprAST* ErrorN(const char *str){Error(str); return 0;}
+};
+
+//实数常数表达式，如“1.0”
+class RealExprAST : public ExprAST {
+public:
+	double val;
+
+	RealExprAST(double value):val(value){}
+	RealExprAST(const RealExprAST &f):val(f.val){}
+	Value* Codegen(CodeGenContext &context) override;
+	void print(int n) override;
+	// RealExprAST* ErrorR(const char *str){Error(str); return 0;}
+};
+
+//布尔常数表达式，如“true”
+class BoolExprAST : public ExprAST {
+public:
+	bool val;
+
+	BoolExprAST(bool value):val(value){}
+	BoolExprAST(const BoolExprAST &f):val(f.val){}
+	Value* Codegen(CodeGenContext &context) override;
+	void print(int n) override;
+	// BoolExprAST* ErrorB(const char *str){Error(str); return 0;}
+};
+
+//字符串常数表达式，如“wasd”
+class StringExprAST : public ExprAST {
+public:
+	string val;
+
+	StringExprAST(const string value):val(value){}
+	StringExprAST(const StringExprAST &f):val(f.val){}
+	Value* Codegen(CodeGenContext &context) override;
+	void print(int n) override;
+	// StringExprAST* ErrorS(const char *str){Error(str); return 0;}
+};
+
+//字符常数表达式，如“a”
+class CharExprAST : public ExprAST {
+public:
+	char val;
+
+	CharExprAST(char value):val(value){}
+	CharExprAST(const CharExprAST &f):val(f.val){}
+	Value* Codegen(CodeGenContext &context) override;
+	void print(int n) override;
+	// CharExprAST* ErrorC(const char *str){Error(str); return 0;}
+};
+
+
+//基础类型如string、integer等
+class BasicTypeAST : public TypeAST {
+public:
+	BasicType type;
+
+	BasicTypeAST(BasicType type):type(type){}
+	BasicTypeAST(const BasicTypeAST &f):type(f.type){}
+	void print(int n) override;
+	// BasicTypeAST* ErrorB(const char *str){Error(str); return 0;}
 };
 
 //const类
@@ -117,26 +233,11 @@ public:
 
 	ConstAST(string name, BasicTypeAST* ty, constValue val)
 		:variableName(name), type(ty), value(val){}
+	ConstAST(const ConstAST &f): variableName(f.variableName), type(f.type), value(f.value){}
 	~ConstAST(){}
-	Value* Codegen(CodeGenContext& context) override;
-	ConstAST* ErrorC(const char *str){fprintf(stderr, "%s\n", str); return 0;}
-};
-
-//所有类型类的基类
-class TypeAST : public Node{
-public:
-	TypeName type;
-
-	TypeAST* ErrorT(const char *str){Error(str); return 0;}
-};
-
-//基础类型如string、integer等
-class BasicTypeAST : public TypeAST {
-public:
-	BasicType type;
-
-	BasicTypeAST(BasicType type):type(type){}
-	BasicTypeAST* ErrorB(const char *str){Error(str); return 0;}
+	Value* Codegen(CodeGenContext &context) override;
+	void print(int n) override;
+	// ConstAST* ErrorC(const char *str){fprintf(stderr, "%s\n", str); return 0;}
 };
 
 //数组类型
@@ -146,27 +247,39 @@ public:
 	ConstAST *startIndex, *endIndex;
 
 	ArrayTypeAST(TypeAST *ty, ConstAST *s, ConstAST *e):type(ty), startIndex(s), endIndex(e){}
-	ArrayTypeAST* ErrorA(const char *str){Error(str); return 0;}
+	//ArrayTypeAST* ErrorA(const char *str){Error(str); return 0;}
 };
 
 //自定义类型
 class SelfdefineTypeAST : public TypeAST {
 public:
-	SelfType type;
+	//SelfType type;
+	SelfdefineTypeAST(){}
+	//virtual ~SelfDefineAST(){}
+	//virtual Value* Codegen(CodeGenContext& context) override;
+	//SelfdefineTypeAST* ErrorS(const char *str){Error(str); return 0;}
+};
 
-	virtual ~SelfDefineAST(){}
-	virtual Value* Codegen(CodeGenContext& context) override;
-	SelfdefineTypeAST* ErrorS(const char *str){Error(str); return 0;}
+//变量声明
+class VariableDeclAST : public Node{
+public:
+	TypeAST *type;
+	vector<string> variableName;
+	VariableDeclAST(TypeAST *t, vector<string> v):type(t), variableName(v){}
+	VariableDeclAST(const VariableDeclAST &f):type(f.type), variableName(f.variableName){}
+	Value* Codegen(CodeGenContext &context) override;
+	void print(int n) override;
+	// VariableDeclAST* ErrorN(const char *str){Error(str); return 0;}
 };
 
 //record类型
 class RecordTypeAST : public SelfdefineTypeAST {
 public:
-	std::vector<VariableDeclAST*> declList;
+	vector<VariableDeclAST*> declList;
 
-	RecordTypeAST(std::vector<VariableDeclAST*> v):declList(v){}
-	RecordTypeAST* ErrorR(const char *str){ErrorS(str); return 0;}
-	Value* Codegen(CodeGenContext& context) override;
+	RecordTypeAST(vector<VariableDeclAST*> v):declList(v){}
+	//RecordTypeAST* ErrorR(const char *str){ErrorS(str); return 0;}
+	//Value* Codegen(CodeGenContext& context) override;
 };
 
 //type A=integer;这种自定义类型
@@ -176,76 +289,8 @@ public:
 	TypeAST* originalType;
 
 	ChangeNameTypeAST(string name, TypeAST* old):newName(name), originalType(old){}
-	ChangeNameTypeAST* ErrorC(const char *str){ErrorS(str); return 0;}
-	Value* Codegen(CodeGenContext& context) override;
-};
-
-//变量声明
-class VariableDeclAST : public Node{
-public:
-	TypeAST *type;
-	std::vector<string> variableName;
-	VariableDeclAST(TypeAST *t, std::vector<string> v):type(t), variableName(v){}
-	Value* Codegen(CodeGenContext& context) override;
-	VariableDeclAST* ErrorN(const char *str){Error(str); return 0;}
-};
-
-//所有表达式类的基类
-class ExprAST : public Node{
-public:
-	ExprType type;
-
-	ExprAST* ErrorE(const char *str){Error(str); return 0;}//这里设置返回，是为了报错时可以扩展为定位到节点而不是简单出现错误信息
-};
-
-//整数常数表达式，如“1”
-class NumberExprAST : public ExprAST {
-public:
-	int val;
-
-	NumberExprAST(int value):val(value){}
-	Value* Codegen(CodeGenContext& context) override;
-	NumberExprAST* ErrorN(const char *str){Error(str); return 0;}
-};
-
-//实数常数表达式，如“1.0”
-class RealExprAST : public ExprAST {
-public:
-	double val;
-
-	RealExprAST(double value):val(value){}
-	Value* Codegen(CodeGenContext& context) override;
-	RealExprAST* ErrorR(const char *str){Error(str); return 0;}
-};
-
-//布尔常数表达式，如“true”
-class BoolExprAST : public ExprAST {
-public:
-	bool val;
-
-	BoolExprAST(bool value):val(value){}
-	Value* Codegen(CodeGenContext& context) override;
-	BoolExprAST* ErrorB(const char *str){Error(str); return 0;}
-};
-
-//字符串常数表达式，如“wasd”
-class StringExprAST : public ExprAST {
-public:
-	string val;
-
-	StringExprAST(const string value):val(value){}
-	Value* Codegen(CodeGenContext& context) override;
-	StringExprAST* ErrorS(const char *str){Error(str); return 0;}
-};
-
-//字符常数表达式，如“a”
-class CharExprAST : public ExprAST {
-public:
-	char val;
-
-	CharExprAST(char value):val(value){}
-	Value* Codegen(CodeGenContext& context) override;
-	CharExprAST* ErrorC(const char *str){Error(str); return 0;}
+	//ChangeNameTypeAST* ErrorC(const char *str){ErrorS(str); return 0;}
+	//Value* Codegen(CodeGenContext& context) override;
 };
 
 //普通变量表达式，如“i”
@@ -254,8 +299,10 @@ public:
 	string name;
 
 	VariableExprAST(const string variableName):name(variableName){}
-	Value* Codegen(CodeGenContext& context) override;
-	VariableExprAST* ErrorV(const char *str){Error(str); return 0;}
+	VariableExprAST(const VariableExprAST &f):name(f.name){}
+	Value* Codegen(CodeGenContext &context) override;
+	void print(int n) override;
+	// VariableExprAST* ErrorV(const char *str){Error(str); return 0;}
 };
 
 //数组变量表达式，如"a[i]"
@@ -266,8 +313,9 @@ public:
 
 	ArrayVariableExprAST(const string variableName, ExprAST *i)
 		:name(variableName), index(i){}
-	Value* Codegen(CodeGenContext& context) override;
-	ArrayVariableExprAST* ErrorA(const char *str){Error(str); return 0;}
+	//Value* Codegen(CodeGenContext& context) override;
+	//void print(int n) override;
+	//ArrayVariableExprAST* ErrorA(const char *str){Error(str); return 0;}
 };
 
 //记录变量表达式，如"a.p"
@@ -278,8 +326,9 @@ public:
 
 	RecordVariableExprAST(const string variableName, ExprAST *s)
 		:name(variableName), sub(s){}
-	Value* Codegen(CodeGenContext& context) override;
-	RecordVariableExprAST* ErrorR(const char *str){Error(str); return 0;}	
+	//Value* Codegen(CodeGenContext& context) override;
+	//void print(int n) override;
+	//RecordVariableExprAST* ErrorR(const char *str){Error(str); return 0;}	
 };
 
 //一元表达式如"!"、“-”
@@ -288,9 +337,11 @@ public:
 	UnaryOpKind op;
 	ExprAST* expr;
 
-	UnaryOpKind(UnaryOpKind o, ExprAST *e):op(o), expr(e){}
-	Value* Codegen(CodeGenContext& context) override;
-	UnaryExprAST* ErrorU(const char *str){Error(str); return 0;}
+	UnaryExprAST(UnaryOpKind o, ExprAST *e):op(o), expr(e){}
+	UnaryExprAST(const UnaryExprAST &f):op(f.op), expr(f.expr){}
+	Value* Codegen(CodeGenContext &context) override;
+	void print(int n) override;
+	// UnaryExprAST* ErrorU(const char *str){Error(str); return 0;}
 };
 
 
@@ -302,8 +353,11 @@ public:
 
 	BinaryExprAST(BinaryOpKind binaryOp, ExprAST *left, ExprAST *right)
 		:op(binaryOp), LExpr(left), RExpr(right){}
-	Value* Codegen(CodeGenContext& context) override;
-	BinaryExprAST* ErrorB(const char *str){Error(str); return 0;}
+	BinaryExprAST(const BinaryExprAST &f)
+		:op(f.op), LExpr(f.LExpr), RExpr(f.RExpr){}
+	Value* Codegen(CodeGenContext &context) override;
+	void print(int n) override;
+	// BinaryExprAST* ErrorB(const char *str){Error(str); return 0;}
 };
 
 //调用函数表达式，包含函数名称和参数
@@ -315,20 +369,23 @@ public:
 
 	CallExprAST(const string name, std::vector<ExprAST*> vec, bool is)
 		:callee(name), args(vec), isSystemCall(is){}
-	Value* Codegen(CodeGenContext& context) override;
-	CallExprAST* ErrorC(const char *str){Error(str); return 0;}
+	CallExprAST(const CallExprAST &f): callee(f.callee), args(f.args), isSystemCall(f.isSystemCall){}
+	Value* Codegen(CodeGenContext &context) override;
+	void print(int n) override;
+	// CallExprAST* ErrorC(const char *str){Error(str); return 0;}
 };
 
 //if else表达式
 class IfExprAST : public ExprAST {
 public:
-	ExprAST *ifCond；
+	ExprAST *ifCond;
 	std::vector<ExprAST*> thenComponent, elseComponent;
 
 	IfExprAST(ExprAST *cond, std::vector<ExprAST*> thenCo, std::vector<ExprAST*> elseCo)
 		:ifCond(cond), thenComponent(thenCo), elseComponent(elseCo){}
-	Value* Codegen(CodeGenContext& context) override;
-	IfExprAST* ErrorI(const char *str){Error(str); return 0;}
+	//Value* Codegen(CodeGenContext& context) override;
+	//void print(int n) override;
+	//IfExprAST* ErrorI(const char *str){Error(str); return 0;}
 };
 
 //for表达式
@@ -341,8 +398,9 @@ public:
 
 	ForExprAST(const string name, ExprAST *st, ExprAST *en, std::vector<ExprAST*> bo, bool inc)
 		:varName(name), start(st), end(en), body(bo), increaseDirection(inc){}
-	Value* Codegen(CodeGenContext& context) override;
-	ForExprAST* ErrorF(const char *str){Error(str); return 0;}
+	//Value* Codegen(CodeGenContext& context) override;
+	//void print(int n) override;
+	//ForExprAST* ErrorF(const char *str){Error(str); return 0;}
 };
 
 //while表达式
@@ -353,8 +411,9 @@ public:
 
 	WhileExprAST(ExprAST *cond, std::vector<ExprAST*> bo)
 		:whileCond(cond), body(bo){}
-	Value* Codegen(CodeGenContext& context) override;
-	WhileExprAST* ErrorW(const char *str){Error(str); return 0;}
+	//Value* Codegen(CodeGenContext& context) override;
+	//void print(int n) override;
+	//WhileExprAST* ErrorW(const char *str){Error(str); return 0;}
 };
 
 //repeat until表达式
@@ -365,13 +424,14 @@ public:
 
 	RepeatExprAST(ExprAST *cond, std::vector<ExprAST*> bo)
 		:untilCond(cond), body(bo){}
-	Value* Codegen(CodeGenContext& context) override;
-	RepeatExprAST* ErrorR(const char *str){Error(str); return 0;}	
+	//Value* Codegen(CodeGenContext& context) override;
+	//void print(int n) override;
+	//RepeatExprAST* ErrorR(const char *str){Error(str); return 0;}	
 };
 
 //函数，包含原型和函数体表达式
 class FunctionAST : public Node{
-public:    
+public:
 	enum class FunctionType { function, procedure};
 	string name;
 	std::vector<VariableDeclAST*> headerDecl;
@@ -381,16 +441,23 @@ public:
 	std::vector<VariableDeclAST*> bodyDecl;
 	std::vector<FunctionAST*> functions;
 	std::vector<ExprAST*> body;
-    FunctionType     type;//区分是procedure还是function
-   
+
+    FunctionType type;//区分是procedure还是function
     bool isFunction() { return type == FunctionType::function; }
     bool isProcedure() { return type == FunctionType::procedure; }
 
-    FunctionAST(const string funcName,std::vector<VariableDeclAST*> funcArgs,TypeAST* ty , std::vector<ConstAST*> con, std::vector<SelfdefineTypeAST*> de, 
-  			  std::vector<FunctionAST*> subFun, std::vector<VariableDeclAST*> funcDecl, std::vector<ExprAST*> funcBody, FunctionType ft)
-  			  :name(funcName),headerDecl(funcArgs),returnType(ty), consts(con), selfdefineType(de), decl(funcDecl), functions(subFun), body(funcBody),type(ft)  {}
-    Value* Codegen(CodeGenContext& context) override;
-    FunctionAST* ErrorF(const char * str) {Error(str); return 0;}
+	FunctionAST(string name, vector<VariableDeclAST *>args, TypeAST *returnType, 
+				vector<ConstAST*> con, vector<SelfdefineTypeAST*> de, 
+				vector<VariableDeclAST*> funcDecl, vector<FunctionAST *> subFun, 
+				vector<ExprAST*> funcBody, FunctionType t)
+			:name(name), headerDecl(args), returnType(returnType), 
+			consts(con), selfdefineType(de), bodyDecl(funcDecl), functions(subFun), 
+			body(funcBody), type(t){}
+	FunctionAST(const FunctionAST &f)
+		:name(f.name), headerDecl(f.headerDecl), returnType(f.returnType),consts(f.consts), selfdefineType(f.selfdefineType), bodyDecl(f.bodyDecl), functions(f.functions), body(f.body), type(f.type){}
+    Value* Codegen(CodeGenContext &context) override;
+	void print(int n) override;
+    // FunctionAST* ErrorF(const char * str) {Error(str); return 0;}
 };
 
 class CodeGenContext{
@@ -408,11 +475,13 @@ public:
             currentFunc = NULL;
         }
     }
-
     Type* getType(string name);
     FunctionAST* getFunction(string name);
     Value* getVar(string name);
     bool addFunction(string name, FunctionAST *FunctionAST);
     bool addVar(string name, Value *var);
     bool addType(string name, Type *type);
+    
 };
+
+#endif
