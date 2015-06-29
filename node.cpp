@@ -9,23 +9,23 @@ Value* ConstAST::Codegen(CodeGenContext& context)  //by ly
 {
 	Value* constVal;
 
-	if (type->type == INTEGER) {
+	if (type->type == Integer) {
 		NumberExprAST n = NumberExprAST(value.i);
 		n.type = Number;
 		constVal = n->Codegen(context);//生成对应常量
-	} else if (type->type == REAL) {
+	} else if (type->type == Real) {
 		RealExprAST r = RealExprAST(value.r);
 		r.type = Real;
 		constVal = r->Codegen(context);
-	} else if (type->type == BOOL) {
+	} else if (type->type == Bool) {
 		BoolExprAST b = BoolExprAST(value.b);
 		b.type = Bool;
 		constVal = b->Codegen(context);
-	} else if (type->type == STRING) {
+	} else if (type->type == String) {
 		StringExprAST s = StringExprAST(value.s);
 		s.type = String;
 		constVal = s->Codegen(context);
-	} else if (type->type == CHAR) {
+	} else if (type->type == Char) {
 		CharExprAST c = CharExprAST(value.c);
 		c.type = Char;
 		constVal = s->Codegen(context);
@@ -39,33 +39,33 @@ Value* ConstAST::Codegen(CodeGenContext& context)  //by ly
 }
 Value* SelfdefineTypeAST::Codegen(CodeGenContext& context)	//by ly
 {
-
+	return NULL;
 }
 Value* RecordTypeAST::Codegen(CodeGenContext& context)	//by ly
 {
-
+	return NULL;
 }
 Value* ChangeNameTypeAST::Codegen(CodeGenContext& context)	//by ly
 {
-
+	return NULL;
 }
 Value* VariableDeclAST::Codegen(CodeGenContext& context)
 {
-		for(int i = 0; i < variableName.size(); i++)
+	for(int i = 0; i < variableName.size(); i++)
 	{
-        if (type->type == INTEGER)
+        if (type->type == Integer)
         {
 			auto alloc = new llvm::AllocaInst(Type::getInt32Ty(llvm::getGlobalContext()), this->variableName[i].c_str(), context.currentBlock());
 		    Builder.CreateStore(this->variableName[i].c_str(), alloc);        	
 		    context.locals()[this->variableName[i]] = alloc;	
         }
-        else if (type->type == REAL)
+        else if (type->type == Real)
         {
 			auto alloc = new llvm::AllocaInst(Type::getDoubleTy(llvm::getGlobalContext()), this->variableName[i].c_str(), context.currentBlock());
 		    Builder.CreateStore(this->variableName[i].c_str(), alloc);        	
 		    context.locals()[this->variableName[i]] = alloc;	
         }
-        else if (type->type == BOOL)
+        else if (type->type == Bool)
         {
 			auto alloc = new llvm::AllocaInst(Type::getInt32Ty(llvm::getGlobalContext()), this->variableName[i].c_str(), context.currentBlock());
 		   	Builder.CreateStore(this->variableName[i].c_str(), alloc);        	
@@ -73,7 +73,6 @@ Value* VariableDeclAST::Codegen(CodeGenContext& context)
         }	
 	}
     return alloc;
-
 }
 
 //表达式Codegen
@@ -108,12 +107,15 @@ Value* CharExprAST::Codegen(CodeGenContext& context)	//by ly
 }
 Value* VariableExprAST::Codegen(CodeGenContext& context)
 {  
+	return NULL;
 }
 Value* ArrayVariableExprAST::Codegen(CodeGenContext& context)
 {
+	return NULL;
 }
 Value* RecordVariableExprAST::Codegen(CodeGenContext& context)
 {
+	return NULL;
 }
 Value* UnaryExprAST::Codegen(CodeGenContext& context)
 {
@@ -122,78 +124,69 @@ Value* UnaryExprAST::Codegen(CodeGenContext& context)
 		// return ConstantFP::get(Type::getDoubleTy(getGlobalContext()), tmp);
   //   }
   //   else 
-  //   	return null;
+	return null;
 }
 Value* BinaryExprAST::Codegen(CodeGenContext& context)
 {
-	  Value *L = LExpr->Codegen();
-	  Value *R = RExpr->Codegen();
-	  if (L == 0 || R == 0) return 0;
-	  case '+': return builder.CreateFAdd(L, R, "addtmp");
-	  case '-': return builder.CreateFSub(L, R, "subtmp");
-	  case '*': return builder.CreateFMul(L, R, "multmp");
-	  case '<':
-	    L = builder.CreateFCmpULT(L, R, "cmptmp");
-	    // Convert bool 0/1 to double 0.0 or 1.0
-	    return builder.CreateUIToFP(L, Type::getDoubleTy(getGlobalContext()),"booltmp");
-	  }
-
+	Value *L = LExpr->Codegen();
+	Value *R = RExpr->Codegen();
+	if (L == 0 || R == 0) return 0;
 	std::cout << "Creating binary operation " << op << std::endl;
-	if (op == plus_kind)
+	/*if (op == plusKind)
 	{
 		return builder.CreateFAdd(L, R, "addtmp");	}
-	else if (op == minus_kind)
+	else if (op == minusKind)
 	{
 		return builder.CreateFSub(L, R, "subtmp");
 	}
-	else if (op == or_kind)
+	else if (op == orKind)
 	{
-
+		return NULL;
 	}
-	else if (op == mul_kind)
+	else if (op == mulKind)
 	{
 		return builder.CreateFMul(L, R, "multmp");
 	}
-	else if (op == div_kind)
+	else if (op == divKind)
 	{
 		return builder.CreateSDiv(L, R, "divtmp");	
 	}
-	else if (op == mod_kind)
+	else if (op == modKind)
 	{
-
+		return NULL;
 	}
-	else if (op == and_kind)
+	else if (op == andKind)
 	{
-
+		return NULL;
 	}
-	else if (op == ge_kind)
+	else if (op == geKind)
 	{
-
+		return NULL;
 	}
-	else if (op == gt_kind)
+	else if (op == gtKind)
 	{
-
+		return NULL;
 	}
-	else if (op == le_kind)
+	else if (op == leKind)
 	{
-
+		return NULL;
 	}
-	else if (op == lt_kind)
+	else if (op == ltKind)
 	{
 	    L = builder.CreateFCmpULT(L, R, "cmptmp");
 	    // Convert bool 0/1 to double 0.0 or 1.0
 	    return builder.CreateUIToFP(L, Type::getDoubleTy(getGlobalContext()),"booltmp");
 
 	}
-	else if (op == eq_kind)
+	else if (op == eqKind)
 	{
-
+		return NULL;
 	}
-	else if (op == ueq_kind)
+	else if (op == ueqKind)
 	{
-
+		return NULL;
 	}
-	else if (op == assignment_kind)
+	else if (op == assignmentKind)
 	{
 	    if (context.locals().find(LExpr->name) == context.locals().end()) {
 	        throw std::domain_error("Undeclared variable " + LExpr->name);
@@ -201,29 +194,29 @@ Value* BinaryExprAST::Codegen(CodeGenContext& context)
 	    }
 	    return builder.CreateStore(RExpr->Codegen(context),context.locals()[LExpr->name]);
 	}
-	return NULL;
-
+	return NULL;*/
+	switch (op){
+		case plusKind: return builder.CreateFAdd(L, R, "addtmp");
+		case minusKind: return builder.CreateFSub(L, R, "subtmp");
+		default: return NULL;
+	}
 }
 Value* CallExprAST::Codegen(CodeGenContext& context)
 {
 	  Function *CalleeF = module->getFunction(callee);
 	  if (CalleeF == 0)
 	    return ErrorV("Unknown function referenced");
-	  
 	  // If argument mismatch error.
 	  if (CalleeF->arg_size() != args.size())
 	    return ErrorV("Incorrect # arguments passed");
-
 	  std::vector<Value*> ArgsV;
 	  for (unsigned i = 0, e = args.size(); i != e; ++i) {
 	    ArgsV.push_back(args[i]->Codegen(context));
 	    if (ArgsV.back() == 0) return 0;
 	  }
-	  
 	  return builder.CreateCall(CalleeF, ArgsV, "calltmp");
-
 }
-Value* IfExprAST::Codegen(CodeGenContext& context)
+/*Value* IfExprAST::Codegen(CodeGenContext& context)
 {
 	  Value *CondV = ifCond->Codegen(context);
 	  if (CondV == 0)
@@ -350,12 +343,14 @@ Value* ForExprAST::Codegen(CodeGenContext& context)
 	  // for expr always returns 0.0.
 	  return Constant::getNullValue(Type::getDoubleTy(getGlobalContext()));
 
-}
+}*/
 Value* WhileExprAST::Codegen(CodeGenContext& context)
 {
+	return NULL;
 }
 Value* RepeatExprAST::Codegen(CodeGenContext& context)
 {
+	return NULL;
 }
 Value* FunctionAST::Codegen(CodeGenContext& context)
 {
