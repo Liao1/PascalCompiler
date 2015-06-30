@@ -3,6 +3,7 @@
 
 #include "SyntaxTree.h"
 #include <vector>
+#include <map>
 #include <llvm/IR/Value.h>
 #include <llvm/IR/Module.h>
 #include <llvm/IR/LLVMContext.h>
@@ -131,8 +132,8 @@ class Node {
 public:
 	Node(){}
 	virtual ~Node(){}
-	virtual Value* Codegen(CodeGenContext& context);
-	virtual void print(int i) = 0;
+	virtual Value* Codegen(CodeGenContext& astcontext){};
+	virtual void print(int i) {};
 	// TypeAST* Error(const char *str){fprintf(stderr, "%s\n", str); return 0;}
 };
 
@@ -141,7 +142,7 @@ class ExprAST : public Node{
 public:
 	ExprType type;
 	ExprAST(){}
-	virtual Value* Codegen(CodeGenContext& context);
+	virtual Value* Codegen(CodeGenContext& astcontext){};
 	// ExprAST* ErrorE(const char *str){Error(str); return 0;}//这里设置返回，是为了报错时可以扩展为定位到节点而不是简单出现错误信息
 };
 
@@ -149,7 +150,7 @@ public:
 class TypeAST : public Node{
 public:
 	TypeAST(){}
-	virtual void print(int i) = 0;
+	virtual void print(int i){};
 	//TypeName type;
 	// TypeAST* ErrorT(const char *str){Error(str); return 0;}
 };
@@ -160,7 +161,7 @@ public:
 	int val;
 	NumberExprAST(int value):val(value){}
 	NumberExprAST(const NumberExprAST &f):val(f.val){}
-	Value* Codegen(CodeGenContext &context) override;
+	Value* Codegen(CodeGenContext &astcontext) override;
 	void print(int n) override;
 	// NumberExprAST* ErrorN(const char *str){Error(str); return 0;}
 };
@@ -172,7 +173,7 @@ public:
 
 	RealExprAST(double value):val(value){}
 	RealExprAST(const RealExprAST &f):val(f.val){}
-	Value* Codegen(CodeGenContext &context) override;
+	Value* Codegen(CodeGenContext &astcontext) override;
 	void print(int n) override;
 	// RealExprAST* ErrorR(const char *str){Error(str); return 0;}
 };
@@ -184,7 +185,7 @@ public:
 
 	BoolExprAST(bool value):val(value){}
 	BoolExprAST(const BoolExprAST &f):val(f.val){}
-	Value* Codegen(CodeGenContext &context) override;
+	Value* Codegen(CodeGenContext &astcontext) override;
 	void print(int n) override;
 	// BoolExprAST* ErrorB(const char *str){Error(str); return 0;}
 };
@@ -196,7 +197,7 @@ public:
 
 	StringExprAST(const string value):val(value){}
 	StringExprAST(const StringExprAST &f):val(f.val){}
-	Value* Codegen(CodeGenContext &context) override;
+	Value* Codegen(CodeGenContext &astcontext) override;
 	void print(int n) override;
 	// StringExprAST* ErrorS(const char *str){Error(str); return 0;}
 };
@@ -207,7 +208,7 @@ public:
 	char val;
 	CharExprAST(char value):val(value){}
 	CharExprAST(const CharExprAST &f):val(f.val){}
-	Value* Codegen(CodeGenContext &context) override;
+	Value* Codegen(CodeGenContext &astcontext) override;
 	void print(int n) override;
 	// CharExprAST* ErrorC(const char *str){Error(str); return 0;}
 };
@@ -235,7 +236,7 @@ public:
 		:variableName(name), type(ty), value(val){}
 	ConstAST(const ConstAST &f): variableName(f.variableName), type(f.type), value(f.value){}
 	~ConstAST(){}
-	Value* Codegen(CodeGenContext &context) override;
+	Value* Codegen(CodeGenContext &astcontext) override;
 	void print(int n) override;
 	// ConstAST* ErrorC(const char *str){fprintf(stderr, "%s\n", str); return 0;}
 };
@@ -267,7 +268,7 @@ public:
 	vector<string> variableName;
 	VariableDeclAST(BasicTypeAST *t, vector<string> v):type(t), variableName(v){}
 	VariableDeclAST(const VariableDeclAST &f):type(f.type), variableName(f.variableName){}
-	Value* Codegen(CodeGenContext &context) override;
+	Value* Codegen(CodeGenContext &astcontext) override;
 	void print(int n) override;
 	// VariableDeclAST* ErrorN(const char *str){Error(str); return 0;}
 };
@@ -300,7 +301,7 @@ public:
 
 	VariableExprAST(const string variableName):name(variableName){}
 	VariableExprAST(const VariableExprAST &f):name(f.name){}
-	Value* Codegen(CodeGenContext &context) override;
+	Value* Codegen(CodeGenContext &astcontext) override;
 	void print(int n) override;
 	// VariableExprAST* ErrorV(const char *str){Error(str); return 0;}
 };
@@ -339,7 +340,7 @@ public:
 
 	UnaryExprAST(UnaryOpKind o, ExprAST *e):op(o), expr(e){}
 	UnaryExprAST(const UnaryExprAST &f):op(f.op), expr(f.expr){}
-	Value* Codegen(CodeGenContext &context) override;
+	Value* Codegen(CodeGenContext &astcontext) override;
 	void print(int n) override;
 	// UnaryExprAST* ErrorU(const char *str){Error(str); return 0;}
 };
@@ -355,7 +356,7 @@ public:
 		:op(binaryOp), LExpr(left), RExpr(right){}
 	BinaryExprAST(const BinaryExprAST &f)
 		:op(f.op), LExpr(f.LExpr), RExpr(f.RExpr){}
-	Value* Codegen(CodeGenContext &context) override;
+	Value* Codegen(CodeGenContext &astcontext) override;
 	void print(int n) override;
 	// BinaryExprAST* ErrorB(const char *str){Error(str); return 0;}
 };
@@ -370,7 +371,7 @@ public:
 	CallExprAST(const string name, std::vector<ExprAST*> vec, bool is)
 		:callee(name), args(vec), isSystemCall(is){}
 	CallExprAST(const CallExprAST &f): callee(f.callee), args(f.args), isSystemCall(f.isSystemCall){}
-	Value* Codegen(CodeGenContext &context) override;
+	Value* Codegen(CodeGenContext &astcontext) override;
 	void print(int n) override;
 	// CallExprAST* ErrorC(const char *str){Error(str); return 0;}
 };
@@ -455,7 +456,7 @@ public:
 			body(funcBody), type(t){}
 	FunctionAST(const FunctionAST &f)
 		:name(f.name), headerDecl(f.headerDecl), returnType(f.returnType),consts(f.consts), selfdefineType(f.selfdefineType), bodyDecl(f.bodyDecl), functions(f.functions), body(f.body), type(f.type){}
-    Value* Codegen(CodeGenContext &context) override;
+    Value* Codegen(CodeGenContext &astcontext) override;
 	void print(int n) override;
     // FunctionAST* ErrorF(const char * str) {Error(str); return 0;}
 };

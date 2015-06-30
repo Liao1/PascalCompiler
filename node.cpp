@@ -2,36 +2,37 @@
 using namespace std;
 using namespace llvm;
 
-Value* ConstAST::Codegen(CodeGenContext& context)  //by ly
+Value* ConstAST::Codegen(CodeGenContext& astcontext)  //by ly
 {
+	cout<<"const"<<endl;
 	Value *constVal, *alloc;
 
 	if (type->type == Integer) {
 		NumberExprAST *n = new NumberExprAST(value.i);
 		// n->type = Number;
-		constVal = n->Codegen(context);//生成对应常量
+		constVal = n->Codegen(astcontext);//生成对应常量
 	} else if (type->type == Real) {
 		RealExprAST *d = new RealExprAST(value.d);
 		// r.type = Real;
-		constVal = d->Codegen(context);
+		constVal = d->Codegen(astcontext);
 	} else if (type->type == Bool) {
 		BoolExprAST *b = new BoolExprAST(value.b);
 		// b.type = Bool;
-		constVal = b->Codegen(context);
+		constVal = b->Codegen(astcontext);
 	} else if (type->type == String) {
 		StringExprAST *s = new StringExprAST(value.s);
 		// s.type = String;
-		constVal = s->Codegen(context);
+		constVal = s->Codegen(astcontext);
 	} else if (type->type == Char) {
 		CharExprAST *c = new CharExprAST(value.c);
 		// c.type = Char;
-		constVal = c->Codegen(context);
+		constVal = c->Codegen(astcontext);
 	}
 	std::vector<string> v;
 	v.push_back(variableName);
 	VariableDeclAST *variabledecl = new VariableDeclAST(type, v);
-	variabledecl->Codegen(context);//定义对应类型的变量
-	return builder.CreateStore(constVal, context.locals.find(variableName)->second);//对变量进行赋值
+	variabledecl->Codegen(astcontext);//定义对应类型的变量
+	return builder.CreateStore(constVal, astcontext.locals.find(variableName)->second);//对变量进行赋值
 }
 /*Value* SelfdefineTypeAST::Codegen(CodeGenContext& context)	//by ly
 {
@@ -45,64 +46,76 @@ Value* ChangeNameTypeAST::Codegen(CodeGenContext& context)	//by ly
 {
 	return NULL;
 }*/
-Value* VariableDeclAST::Codegen(CodeGenContext& context)
+Value* VariableDeclAST::Codegen(CodeGenContext& astcontext)
 {
+	cout<<"var"<<endl;
 	Value *alloc;
 	for(int i = 0; i < variableName.size(); i++)
 	{
 		if (type->type == Integer)
 		{
+			cout<<"new integer"<<endl;
+			// alloc = new GlobalVarialbe(module,Type::getInt32Ty(llvm::getGlobalContext()),GlobalValue::ExternalLinkage);
 			alloc = new llvm::AllocaInst(Type::getInt32Ty(llvm::getGlobalContext()), this->variableName[i].c_str());
-			builder.CreateStore(NULL, alloc);			
-			context.locals.find(this->variableName[i])->second = alloc;	
+			cout<<"create store"<<endl;
+			// cout << alloc << endl;
+			Value *val = builder.getInt32(0);
+			builder.CreateStore(val, alloc);
+			cout<<"sign up at varTable"<<endl;	
+			cout << this->variableName[i] << endl;	
+			astcontext.locals.find(this->variableName[i])->second = alloc;	
 		}
 		else if (type->type == Real)
 		{
+			cout<<"new real"<<endl;
 			alloc = new llvm::AllocaInst(Type::getDoubleTy(llvm::getGlobalContext()), this->variableName[i].c_str());
-			builder.CreateStore(NULL, alloc);			
-			context.locals.find(this->variableName[i])->second = alloc;	
+			// builder.CreateStore(NULL, alloc);			
+			astcontext.locals.find(this->variableName[i])->second = alloc;	
 		}
 		else if (type->type == Bool)
 		{
+			cout<<"new bool"<<endl;
 			alloc = new llvm::AllocaInst(Type::getInt32Ty(llvm::getGlobalContext()), this->variableName[i].c_str());
-		   	builder.CreateStore(NULL, alloc);			
-			context.locals.find(this->variableName[i])->second = alloc;	
-		}	
+		   	// builder.CreateStore(NULL, alloc);			
+			astcontext.locals.find(this->variableName[i])->second = alloc;	
+		} else {
+			return NULL;
+		}
 	}
 	return alloc;
 }
 
 //表达式Codegen
 //整数常数表达式，如“1”
-Value* NumberExprAST::Codegen(CodeGenContext& context)
+Value* NumberExprAST::Codegen(CodeGenContext& astcontext)
 {
 	std::cout << "Creating integer: " << val << std::endl;
-	return ConstantInt::get(Type::getInt64Ty(getGlobalContext()), val, true);
+	return ConstantInt::get(Type::getInt32Ty(getGlobalContext()), val, true);
 }
 //实数常数表达式，如“1.0”
-Value* RealExprAST::Codegen(CodeGenContext& context)
+Value* RealExprAST::Codegen(CodeGenContext& astcontext)
 {
 	std::cout << "Creating double: " << val << std::endl;
 	return ConstantFP::get(Type::getDoubleTy(getGlobalContext()), val);
 }
-Value* BoolExprAST::Codegen(CodeGenContext& context)
+Value* BoolExprAST::Codegen(CodeGenContext& astcontext)
 {
 	std::cout << "Creating bool: " << val << std::endl;
 	return ConstantInt::get(Type::getInt64Ty(getGlobalContext()), val, true);
 }
-Value* StringExprAST::Codegen(CodeGenContext& context)	//by ly
+Value* StringExprAST::Codegen(CodeGenContext& astcontext)	//by ly
 {
 	cout << "Creating string: " << val << endl;
 	return builder.CreateGlobalStringPtr(val);
 }
-Value* CharExprAST::Codegen(CodeGenContext& context)	//by ly
+Value* CharExprAST::Codegen(CodeGenContext& astcontext)	//by ly
 {
 	cout << "Create char: " << val << endl;
 	string s = "";
 	s = s + val;
 	return builder.CreateGlobalStringPtr(s);
 }
-Value* VariableExprAST::Codegen(CodeGenContext& context)
+Value* VariableExprAST::Codegen(CodeGenContext& astcontext)
 {  
 	return NULL;
 }
@@ -114,7 +127,7 @@ Value* RecordVariableExprAST::Codegen(CodeGenContext& context)
 {
 	return NULL;
 }*/
-Value* UnaryExprAST::Codegen(CodeGenContext& context)
+Value* UnaryExprAST::Codegen(CodeGenContext& astcontext)
 {
   //   if(op == '-'){	
   //   	float tmp = -(expr->val);
@@ -123,10 +136,11 @@ Value* UnaryExprAST::Codegen(CodeGenContext& context)
   //   else 
 	return NULL;
 }
-Value* BinaryExprAST::Codegen(CodeGenContext& context)
+Value* BinaryExprAST::Codegen(CodeGenContext& astcontext)
 {
-	Value *L = LExpr->Codegen(context);
-	Value *R = RExpr->Codegen(context);
+	cout<<"binary"<<endl;
+	Value *L = LExpr->Codegen(astcontext);
+	Value *R = RExpr->Codegen(astcontext);
 	if (L == 0 || R == 0) return 0;
 	std::cout << "Creating binary operation " << op << std::endl;
 	/*if (op == plusKind)
@@ -198,8 +212,9 @@ Value* BinaryExprAST::Codegen(CodeGenContext& context)
 		default: return NULL;
 	}
 }
-Value* CallExprAST::Codegen(CodeGenContext& context)
+Value* CallExprAST::Codegen(CodeGenContext& astcontext)
 {
+	cout<<"call"<<endl;
 	Function *CalleeF = module.getFunction(callee);
 	if (CalleeF == 0)
 		// return ErrorV("Unknown function referenced");
@@ -210,7 +225,7 @@ Value* CallExprAST::Codegen(CodeGenContext& context)
 		return NULL;
 	std::vector<Value*> ArgsV;
 	for (unsigned i = 0, e = args.size(); i != e; ++i) {
-		ArgsV.push_back(args[i]->Codegen(context));
+		ArgsV.push_back(args[i]->Codegen(astcontext));
 		if (ArgsV.back() == 0) return 0;
 	}
 	return builder.CreateCall(CalleeF, ArgsV, "calltmp");
@@ -351,11 +366,13 @@ Value* RepeatExprAST::Codegen(CodeGenContext& context)
 {
 	return NULL;
 }*/
-Value* FunctionAST::Codegen(CodeGenContext& context)
+Value* FunctionAST::Codegen(CodeGenContext& astcontext)
 {
+	cout<<"function"<<endl;
 	std::vector<llvm::Type*> arg_types;
 	for(int i = 0;i < headerDecl.size();i++)
 	{
+		cout<<"args"<<endl;
 		for (int j=0; j<headerDecl[i]->variableName.size(); j++)
 			if (headerDecl[i]->type->type == Integer)
 				arg_types.push_back(llvm::Type::getInt32Ty(llvm::getGlobalContext())); 
@@ -363,26 +380,34 @@ Value* FunctionAST::Codegen(CodeGenContext& context)
 				arg_types.push_back(llvm::Type::getVoidTy(llvm::getGlobalContext())); 
 	}
 	FunctionType *f_type;
-	if (returnType->type == Integer)
+	cout<<"create f_type"<<endl;
+	if (returnType && returnType->type == Integer)
 		f_type = llvm::FunctionType::get(this->isProcedure() ? llvm::Type::getVoidTy(llvm::getGlobalContext()) : llvm::Type::getInt32Ty(llvm::getGlobalContext()), llvm::makeArrayRef(arg_types), false);
 	else
 		f_type = llvm::FunctionType::get(this->isProcedure() ? llvm::Type::getVoidTy(llvm::getGlobalContext()) : llvm::Type::getVoidTy(llvm::getGlobalContext()), llvm::makeArrayRef(arg_types), false);
+	cout<<"create function"<<endl;
 	Function *function = llvm::Function::Create(f_type, llvm::GlobalValue::InternalLinkage, this->name.c_str(), &module);
 	// auto block = llvm::BasicBlock::Create(getGlobalContext(), "entry", function, 0);
-	// builder.SetInsertPoint(BasicBlock::Create(context,"entry",&function));
+	builder.SetInsertPoint(BasicBlock::Create(context,"entry",function));
 	// push block and start routine
 	// context.pushBlock(block);
 
 	// deal with arguments
 	llvm::Value* arg_value;	
+	cout<<"create args_values"<<endl;
 	auto args_values = function->arg_begin();
 	for (int i = 0; i < headerDecl.size(); i++)
 	{
-		headerDecl[i]->Codegen(context);
+		cout<<"create code for headerDecl"<<endl;
+		headerDecl[i]->Codegen(astcontext);
+		cout<<"set argValue"<<endl;
 		for (int j=0; j<headerDecl[i]->variableName.size(); j++){
+			cout<<"args_values++"<<endl;
 			arg_value = args_values++;
+			cout<<"set Name"<<endl;
 			arg_value->setName(headerDecl[i]->variableName[j].c_str());
-			builder.CreateStore(arg_value,context.locals.find(headerDecl[i]->variableName[j])->second);
+			cout<<"Create store"<<endl;
+			builder.CreateStore(arg_value,astcontext.locals.find(headerDecl[i]->variableName[j])->second);
 		}
 		// auto inst = new llvm::StoreInst(arg_value, context.locals()[arg->name->name], false, block);
 
@@ -396,29 +421,33 @@ Value* FunctionAST::Codegen(CodeGenContext& context)
 			alloc = new llvm::AllocaInst(Type::getInt32Ty(llvm::getGlobalContext()), this->name.c_str());
 		else
 			alloc = new llvm::AllocaInst(Type::getVoidTy(llvm::getGlobalContext()), this->name.c_str());
-		builder.CreateStore(NULL, alloc);		
-		context.locals.find(this->name)->second = alloc;	
+		// builder.CreateStore(NULL, alloc);		
+		astcontext.locals.find(this->name)->second = alloc;	
 		// auto alloc = new llvm::AllocaInst(this->return_type->toLLVMType(), this->routine_name->name.c_str(), context.currentBlock());
+	}
+	// deal with constant define
+	for (int i=0; i<consts.size(); i++){
+		consts[i]->Codegen(astcontext);
 	}
 	// deal with variable declaration
 	for (int i = 0; i < bodyDecl.size(); i++)
 	{
-		bodyDecl[i]->Codegen(context);
+		bodyDecl[i]->Codegen(astcontext);
 	}
 	// deal with program statements
 	for (int i = 0; i < functions.size(); i++)
 	{
-		functions[i]->Codegen(context);
+		functions[i]->Codegen(astcontext);
 	}
 	for (int i = 0; i < body.size(); i++)
 	{
-		body[i]->Codegen(context);
+		body[i]->Codegen(astcontext);
 	}
 
 	// return value
 	if (this->isFunction()) {
 		std::cout << "Generating return value for function" << std::endl;
-		auto load_ret = new llvm::LoadInst(context.locals.find(this->name)->second, this->name);
+		auto load_ret = new llvm::LoadInst(astcontext.locals.find(this->name)->second, this->name);
 	   // llvm::ReturnInst::Create(llvm::getGlobalContext(), load_ret, block);
 		builder.CreateRet(load_ret);
 	}
