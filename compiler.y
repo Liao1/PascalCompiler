@@ -237,7 +237,11 @@ proc_stmt:
 		$$->children[0] = $3;
 		strcpy($$->name, $1);
 	}
-	| SYS_PROC	{ $$ = NULL; }
+	| SYS_PROC	{
+		$$ = CreateStmtNode(proc_stmt);
+		strcpy($$->name, $1);
+		$$->system = 1;
+	}
 	| SYS_PROC LP expression_list RP	{
 		$$ = CreateStmtNode(proc_stmt);
 		$$->children[0] = $3;
