@@ -415,7 +415,7 @@ public:
 
 	ForExprAST(const string name, ExprAST *st, ExprAST *en, std::vector<ExprAST*> bo, bool inc)
 		:varName(name), start(st), end(en), body(bo), increaseDirection(inc){}
-	//Value* Codegen(CodeGenContext& context) override;
+	Value* Codegen(CodeGenContext& astcontext) override;
 	void print(int n) override;
 	//ForExprAST* ErrorF(const char *str){Error(str); return 0;}
 };
@@ -483,6 +483,7 @@ public:
 	map<string, Type*> typeTable;
 	map<string, FunctionAST*> functionTable;
 	map<string, Value*> locals;
+	vector<string> loopVar;
 	FunctionAST *currentFunc;
 
 	CodeGenContext(CodeGenContext *parent=NULL):parent(parent){

@@ -2,7 +2,7 @@
 using namespace std;
 using namespace llvm;
 
-Value* ConstAST::Codegen(CodeGenContext& astcontext)  //by ly
+Value* ConstAST::Codegen(CodeGenContext& astcontext)//by ly
 {
 	cout<<"const"<<endl;
 	Value *constVal, *alloc;
@@ -59,7 +59,10 @@ Value* VariableDeclAST::Codegen(CodeGenContext& astcontext)
 		{
 			cout<<"new integer"<<endl;
 			Value *val = builder.getInt32(0);
-			alloc = new llvm::GlobalVariable(module, Type::getInt32Ty(llvm::getGlobalContext()), false, GlobalValue::ExternalLinkage, builder.getInt32(0));
+			if (isGlobal)
+				alloc = new llvm::GlobalVariable(module, Type::getInt32Ty(llvm::getGlobalContext()), false, GlobalValue::ExternalLinkage, builder.getInt32(0));
+			else
+				alloc = builder.CreateAlloca(Type::getInt32Ty(llvm::getGlobalContext()));
 			// alloc = builder.CreateAlloca(Type::getInt32Ty(llvm::getGlobalContext()));
 			// cout<<"create store"<<endl;
 			// cout << alloc << endl;
@@ -87,7 +90,7 @@ Value* VariableDeclAST::Codegen(CodeGenContext& astcontext)
 		{
 			cout<<"new bool"<<endl;
 			alloc = new llvm::AllocaInst(Type::getInt32Ty(llvm::getGlobalContext()), this->variableName[i].c_str());
-		   	// builder.CreateStore(NULL, alloc);			
+		 	// builder.CreateStore(NULL, alloc);			
 			astcontext.locals[variableName[i]] = alloc;
 		} else {
 			return NULL;
@@ -127,11 +130,16 @@ Value* CharExprAST::Codegen(CodeGenContext& astcontext)	//by ly
 	return builder.CreateGlobalStringPtr(s);
 }
 Value* VariableExprAST::Codegen(CodeGenContext& astcontext)
-{  
-  // Look this variable up in the function.
-  Value *V = astcontext.locals.find(name)->second;
-  cout<<"pick variable:"<<name<<endl;
-  return builder.CreateLoad(V);
+{
+	// Look this variable up in the function.
+	Value *V = astcontext.locals.find(name)->second;
+	for (int i=0; i<astcontext.loopVar.size(); i++)
+		if (name==astcontext.loopVar[i]){
+			cout<<"pick variableName"<<endl;
+			return V;
+		}
+	cout<<"pick variable:"<<name<<endl;
+	return builder.CreateLoad(V);
 }
 /*Value* ArrayVariableExprAST::Codegen(CodeGenContext& context)
 {
@@ -143,11 +151,11 @@ Value* RecordVariableExprAST::Codegen(CodeGenContext& context)
 }*/
 Value* UnaryExprAST::Codegen(CodeGenContext& astcontext)
 {
-  //   if(op == '-'){	
-  //   	float tmp = -(expr->val);
-		// return ConstantFP::get(Type::getDoubleTy(getGlobalContext()), tmp);
-  //   }
-  //   else 
+	// if(op == '-'){	
+	// 	float tmp = -(expr->val);
+			// return ConstantFP::get(Type::getDoubleTy(getGlobalContext()), tmp);
+	// }
+	// else 
 	return NULL;
 }
 Value* BinaryExprAST::Codegen(CodeGenContext& astcontext)
@@ -232,10 +240,10 @@ Value* BinaryExprAST::Codegen(CodeGenContext& astcontext)
 		}
 		case ltKind:
 		{
-			L = builder.CreateFCmpULT(L, R, "cmptmp");
+			L = builder.CreateICmpSLT(L, R, "cmptmp");
+			// cout<<"expr val="<<L<<endl;
 			// Convert bool 0/1 to double 0.0 or 1.0
-			return builder.CreateUIToFP(L, Type::getDoubleTy(getGlobalContext()),"booltmp");
-
+			return L;
 		}
 		default: return NULL;
 	}
@@ -276,139 +284,140 @@ Value* CallProcedureExprAST::Codegen(CodeGenContext& astcontext)
 		ArgsV.push_back(args[i]->Codegen(astcontext));
 		if (ArgsV.back() == 0) return 0;
 	}
+	cout<<"call end"<<endl;
 	ArrayRef<Value*> args(ArgsV);
 	return builder.CreateCall(CalleeF, args);
 }
 
 Value* IfExprAST::Codegen(CodeGenContext& astcontext)
 {
-	  Value *CondV = ifCond->Codegen(astcontext);
-	  if (CondV == 0)
+	cout<<"if"<<endl;
+	Value *CondV = ifCond->Codegen(astcontext);
+	if (CondV == 0)
 		return 0;
 
-	  // Convert condition to a bool by comparing equal to 0.0.
-	  CondV = builder.CreateFCmpONE(
-		  CondV, ConstantFP::get(getGlobalContext(), APFloat(0.0)), "ifcond");
+	// Convert condition to a bool by comparing equal to 0.0.
+	CondV = builder.CreateICmpNE(
+		CondV, ConstantInt::get(Type::getInt1Ty(getGlobalContext()), 0, true), "ifcond");
 
-	  Function *TheFunction = builder.GetInsertBlock()->getParent();
+	Function *TheFunction = builder.GetInsertBlock()->getParent();
 
-	  // Create blocks for the then and else cases.  Insert the 'then' block at the
-	  // end of the function.
-	  BasicBlock *ThenBB =
-		  BasicBlock::Create(getGlobalContext(), "then", TheFunction);
-	  BasicBlock *ElseBB = BasicBlock::Create(getGlobalContext(), "else");
-	  BasicBlock *MergeBB = BasicBlock::Create(getGlobalContext(), "ifcont");
+	// Create blocks for the then and else cases.Insert the 'then' block at the
+	// end of the function.
+	BasicBlock *ThenBB =
+		BasicBlock::Create(getGlobalContext(), "then", TheFunction);
+	BasicBlock *ElseBB = BasicBlock::Create(getGlobalContext(), "else");
+	BasicBlock *MergeBB = BasicBlock::Create(getGlobalContext(), "ifcont");
 
-	  builder.CreateCondBr(CondV, ThenBB, ElseBB);
+	builder.CreateCondBr(CondV, ThenBB, ElseBB);
 
-	  // Emit then value.
-	  builder.SetInsertPoint(ThenBB);
+	// Emit then value.
+	builder.SetInsertPoint(ThenBB);
 
-	  vector<Value *> ThenV;
-	  for (int i = 0; i < thenComponent.size(); i++)
-	  ThenV.push_back(thenComponent[i]->Codegen(astcontext));
+	vector<Value *> ThenV;
+	// cout<<"then size"<<thenComponent.size()<<endl;
+	for (int i = 0; i < thenComponent.size(); i++){
+		// thenComponent[i]->print(1);
+		ThenV.push_back(thenComponent[i]->Codegen(astcontext));
+	}
 
-	  builder.CreateBr(MergeBB);
-	  // Codegen of 'Then' can change the current block, update ThenBB for the PHI.
-	  ThenBB = builder.GetInsertBlock();
+	builder.CreateBr(MergeBB);
+	// Codegen of 'Then' can change the current block, update ThenBB for the PHI.
+	ThenBB = builder.GetInsertBlock();
 
-	  // Emit else block.
-	  TheFunction->getBasicBlockList().push_back(ElseBB);
-	  builder.SetInsertPoint(ElseBB);
-	  vector<Value *> ElseV;
-	  for (int i = 0; i < elseComponent.size(); i++)
-	  ElseV.push_back(elseComponent[i]->Codegen(astcontext));
+	// Emit else block.
+	TheFunction->getBasicBlockList().push_back(ElseBB);
+	builder.SetInsertPoint(ElseBB);
+	vector<Value *> ElseV;
+	for (int i = 0; i < elseComponent.size(); i++)
+	ElseV.push_back(elseComponent[i]->Codegen(astcontext));
 
-	  builder.CreateBr(MergeBB);
-	  // Codegen of 'Else' can change the current block, update ElseBB for the PHI.
-	  ElseBB = builder.GetInsertBlock();
+	builder.CreateBr(MergeBB);
+	// Codegen of 'Else' can change the current block, update ElseBB for the PHI.
+	ElseBB = builder.GetInsertBlock();
 
-	  // Emit merge block.
-	  TheFunction->getBasicBlockList().push_back(MergeBB);
-	  builder.SetInsertPoint(MergeBB);
-	  PHINode *PN =
-		  builder.CreatePHI(Type::getDoubleTy(getGlobalContext()), 2, "iftmp");
-	  for (int i = 0; i < ThenV.size(); i++)
-	  PN->addIncoming(ThenV[i], ThenBB);
-	  for (int i = 0; i < ElseV.size(); i++)
-	  PN->addIncoming(ElseV[i], ElseBB);
-	  return PN;
+	// Emit merge block.
+	TheFunction->getBasicBlockList().push_back(MergeBB);
+	builder.SetInsertPoint(MergeBB);
+	/*PHINode *PN =
+		builder.CreatePHI(Type::getInt32Ty(getGlobalContext()), 2, "iftmp");
+	for (int i = 0; i < ThenV.size(); i++)
+	PN->addIncoming(ThenV[i], ThenBB);
+	for (int i = 0; i < ElseV.size(); i++)
+	PN->addIncoming(ElseV[i], ElseBB);*/
+	return NULL;
 }
 
-/*
-Value* ForExprAST::Codegen(CodeGenContext& context)
+Value* ForExprAST::Codegen(CodeGenContext& astcontext)
 {
-	  Value *StartVal = start->Codegen(context);
-	  if (StartVal == 0)
+	Value *StartVal = start->Codegen(astcontext);
+	if (StartVal == 0)
 		return 0;
 
-	  // Make the new basic block for the loop header, inserting after current
-	  // block.
-	  Function *TheFunction = builder.GetInsertBlock()->getParent();
-	  BasicBlock *PreheaderBB = builder.GetInsertBlock();
-	  BasicBlock *LoopBB =
-		  BasicBlock::Create(getGlobalContext(), "loop", TheFunction);
+	// Make the new basic block for the loop header, inserting after current
+	// block.
+	Function *TheFunction = builder.GetInsertBlock()->getParent();
+	BasicBlock *PreheaderBB = builder.GetInsertBlock();
+	BasicBlock *LoopBB =
+		BasicBlock::Create(getGlobalContext(), "loop", TheFunction);
 
-	  // Insert an explicit fall through from the current block to the LoopBB.
-	  builder.CreateBr(LoopBB);
+	// Insert an explicit fall through from the current block to the LoopBB.
+	builder.CreateBr(LoopBB);
 
-	  // Start insertion in LoopBB.
-	  builder.SetInsertPoint(LoopBB);
+	// Start insertion in LoopBB.
+	builder.SetInsertPoint(LoopBB);
 
-	  // Start the PHI node with an entry for Start.
-	  PHINode *Variable = builder.CreatePHI(Type::getDoubleTy(getGlobalContext()),
+	// Start the PHI node with an entry for Start.
+	PHINode *Variable = builder.CreatePHI(Type::getInt32Ty(getGlobalContext()),
 											2, varName.c_str());
-	  Variable->addIncoming(StartVal, PreheaderBB);
+	Variable->addIncoming(StartVal, PreheaderBB);
 
-	  // Within the loop, the variable is defined equal to the PHI node.  If it
-	  // shadows an existing variable, we have to restore it, so save it now.
-	  Value *OldVal = NamedValues[varName];
-	  NamedValues[varName] = Variable;
+	// Within the loop, the variable is defined equal to the PHI node.If it
+	// shadows an existing variable, we have to restore it, so save it now.
+	Value *OldVal = astcontext.locals.find(varName)->second;
+	astcontext.locals[varName] = Variable;
+	astcontext.loopVar.push_back(varName);
+	cout<<"push "<<varName<<endl;
+	// Emit the body of the loop.This, like any other expr, can change the
+	// current BB.Note that we ignore the value computed by the body, but don't
+	// allow an error.
+	for (int i=0; i<body.size(); i++)
+		body[i]->Codegen(astcontext);
+	// Emit the step value.
+	Value *StepVal;
+	StepVal = ConstantInt::get(Type::getInt32Ty(getGlobalContext()), 1, true);
+	Value *NextVar = builder.CreateAdd(Variable, StepVal, "nextvar");
 
-	  // Emit the body of the loop.  This, like any other expr, can change the
-	  // current BB.  Note that we ignore the value computed by the body, but don't
-	  // allow an error.
-	  if (body->Codegen(context) == 0)
-		return 0;
+	// Compute the end condition.
+	// cout<<"end not null"<<endl;
+	// Convert condition to a bool by comparing equal to 0.0.
+	Value *EndCond = builder.CreateICmpNE(Variable, end->Codegen(astcontext), "loopcond");
 
-	  // Emit the step value.
-	  Value *StepVal;
-	  StepVal = ConstantFP::get(getGlobalContext(), APFloat(1.0));
-	  Value *NextVar = builder.CreateFAdd(Variable, StepVal, "nextvar");
+	// Create the "after loop" block and insert it.
+	BasicBlock *LoopEndBB = builder.GetInsertBlock();
+	BasicBlock *AfterBB =
+		BasicBlock::Create(getGlobalContext(), "afterloop", TheFunction);
 
-	  // Compute the end condition.
-	  Value *EndCond = end->Codegen(context);
-	  if (EndCond == 0)
-		return EndCond;
+	// Insert the conditional branch into the end of LoopEndBB.
+	builder.CreateCondBr(EndCond, LoopBB, AfterBB);
 
-	  // Convert condition to a bool by comparing equal to 0.0.
-	  EndCond = builder.CreateFCmpONE(
-		  EndCond, ConstantFP::get(getGlobalContext(), APFloat(0.0)), "loopcond");
+	// Any new code will be inserted in AfterBB.
+	builder.SetInsertPoint(AfterBB);
 
-	  // Create the "after loop" block and insert it.
-	  BasicBlock *LoopEndBB = builder.GetInsertBlock();
-	  BasicBlock *AfterBB =
-		  BasicBlock::Create(getGlobalContext(), "afterloop", TheFunction);
+	// Add a new entry to the PHI node for the backedge.
+	Variable->addIncoming(NextVar, LoopEndBB);
 
-	  // Insert the conditional branch into the end of LoopEndBB.
-	  builder.CreateCondBr(EndCond, LoopBB, AfterBB);
+	// Restore the unshadowed variable.
+	if (OldVal)
+		astcontext.locals[varName] = OldVal;
+	else
+		astcontext.locals.erase(varName);
+	astcontext.loopVar.pop_back();
+	cout<<"pop "<<varName<<endl;
+	// for expr always returns 0.0.
+	return Constant::getNullValue(Type::getInt32Ty(getGlobalContext()));
 
-	  // Any new code will be inserted in AfterBB.
-	  builder.SetInsertPoint(AfterBB);
-
-	  // Add a new entry to the PHI node for the backedge.
-	  Variable->addIncoming(NextVar, LoopEndBB);
-
-	  // Restore the unshadowed variable.
-	  if (OldVal)
-		NamedValues[VarName] = OldVal;
-	  else
-		NamedValues.erase(VarName);
-
-	  // for expr always returns 0.0.
-	  return Constant::getNullValue(Type::getDoubleTy(getGlobalContext()));
-
-}*/
+}
 /*Value* WhileExprAST::Codegen(CodeGenContext& context)
 {
 	return NULL;
@@ -421,6 +430,12 @@ Value* FunctionAST::Codegen(CodeGenContext& astcontext)
 {
 	cout<<"function"<<endl;
 	std::vector<llvm::Type*> arg_types;
+
+	for (int i = 0; i < functions.size(); i++)
+	{
+		functions[i]->Codegen(astcontext);
+	}
+
 	for(int i = 0;i < headerDecl.size();i++)
 	{
 		cout<<"args"<<endl;
@@ -496,21 +511,17 @@ Value* FunctionAST::Codegen(CodeGenContext& astcontext)
 	if (this->isFunction()) {
 		std::cout << "Generating return value for function" << std::endl;
 		auto load_ret = new llvm::LoadInst(astcontext.locals.find(this->name)->second, this->name);
-	   // llvm::ReturnInst::Create(llvm::getGlobalContext(), load_ret, block);
+	 // llvm::ReturnInst::Create(llvm::getGlobalContext(), load_ret, block);
 		builder.CreateRet(load_ret);
 	} else {
 		std::cout << "Generating return void for procedure" << std::endl;
 		builder.CreateRetVoid();
-	 //   llvm::ReturnInst::Create(llvm::getGlobalContext(), block);
+	 // llvm::ReturnInst::Create(llvm::getGlobalContext(), block);
 	}
 
-	for (int i = 0; i < functions.size(); i++)
-	{
-		functions[i]->Codegen(astcontext);
-	}
 	// pop block and finsh
-  //  context.popBlock();
-  //  std::cout << "Creating " << this->toString() << ":" << this->routine_name->name << std::endl;
+//context.popBlock();
+//std::cout << "Creating " << this->toString() << ":" << this->routine_name->name << std::endl;
 	return function;
 
 }

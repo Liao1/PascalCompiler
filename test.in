@@ -1,7 +1,8 @@
 program test1;
 var
-	a:integer;
+	a, i:integer;
 begin
-	a:=10;
-	write(a);
+	a:=0;
+	for i:=1 to 10 do
+		writeI(i);
 end.
