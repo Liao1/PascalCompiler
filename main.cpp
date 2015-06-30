@@ -31,8 +31,8 @@ FunctionAST *program = NULL;
 
 int main(int argc,char **argv){
 	bool runJit = false;
-	bool irOutput = false;
-	bool asmOutput = true;
+	bool irOutput = true;
+	bool asmOutput = false;
 	bool objOutput = false;
 	TargetMachine::CodeGenFileType outputFileType = TargetMachine::CGFT_Null;
 	char *outputFileName = NULL;
