@@ -149,8 +149,7 @@ int main(int argc,char **argv){
 }
 
 void createSystemFunctions(CodeGenContext& astContext){
-	//insert printf func decl
-	cout << "1" << endl; 
+	//insert printf func decl 
 	vector<Type*> printfFuncArgTypes;
 	printfFuncArgTypes.push_back(builder.getInt8PtrTy());
 	ArrayRef<Type*> printfFuncArgTypesRef(printfFuncArgTypes);
@@ -159,44 +158,36 @@ void createSystemFunctions(CodeGenContext& astContext){
 
 	vector<Type*> emptyTypes;
 
-	//create print long func
-	cout << "2" << endl; 
+	//create print integer func
 	vector<Type*> printfLongFuncArgTypes;
 	printfLongFuncArgTypes.push_back(builder.getInt32Ty());
 	ArrayRef<Type*> printfLongFuncArgTypesRef(printfLongFuncArgTypes);
 	FunctionType *printfLongFuncType = FunctionType::get(builder.getVoidTy(),printfLongFuncArgTypesRef,false);
-	Function *printfLongFunc = Function::Create(printfLongFuncType,Function::ExternalLinkage,"write",&module);
+	Function *printfLongFunc = Function::Create(printfLongFuncType,Function::ExternalLinkage,"writeI",&module);
 	builder.SetInsertPoint(BasicBlock::Create(context,"entry",printfLongFunc));
 	Value *longFormat = builder.CreateGlobalStringPtr("%d");
 	builder.CreateCall2(printfFunc,longFormat,printfLongFunc->arg_begin());
 	builder.CreateRetVoid();
-	//FunctionAST *printfL = new FunctionAST("write",printfLongFunc,emptyTypes,printfLongFuncArgTypes);
-
-	//create print double func
-	/*cout << "3" << endl;
+	
+	//create print real func
 	vector<Type*> printfDoubleFuncArgTypes;
 	printfDoubleFuncArgTypes.push_back(builder.getDoubleTy());
 	ArrayRef<Type*> printfDoubleFuncArgTypesRef(printfDoubleFuncArgTypes);
 	FunctionType *printfDoubleFuncType = FunctionType::get(builder.getVoidTy(),printfDoubleFuncArgTypesRef,false);
-	Function *printfDoubleFunc = Function::Create(printfDoubleFuncType,Function::ExternalLinkage,"printD",&module);
+	Function *printfDoubleFunc = Function::Create(printfDoubleFuncType,Function::ExternalLinkage,"writeR",&module);
 	builder.SetInsertPoint(BasicBlock::Create(context,"entry",printfDoubleFunc));
 	Value *doubleFormat = builder.CreateGlobalStringPtr("%lf");
 	builder.CreateCall2(printfFunc,doubleFormat,printfDoubleFunc->arg_begin());
-	builder.CreateRetVoid();*/
-	//FunctionAST *printfD = new FunctionAST("printD",printfDoubleFunc,emptyTypes,printfDoubleFuncArgTypes);
+	builder.CreateRetVoid();
+	
+	//create print string func
+	//StringRef printfStringFuncArgTypesRef("");
 
 	//create println func
-	/*cout << "4" << endl;
 	FunctionType *printlnFuncType = FunctionType::get(builder.getVoidTy(),false);
-	Function *printlnFunc = Function::Create(printlnFuncType,Function::ExternalLinkage,"println",&module);
+	Function *printlnFunc = Function::Create(printlnFuncType,Function::ExternalLinkage,"writeln",&module);
 	builder.SetInsertPoint(BasicBlock::Create(context,"entry",printlnFunc));
 	Value *lnFormat = builder.CreateGlobalStringPtr("\n");
 	builder.CreateCall(printfFunc,lnFormat);
-	builder.CreateRetVoid();*/
-	//FunctionAST *println = new FunctionAST("println",printlnFunc,emptyTypes,emptyTypes);
-
-	//astContext.addFunction("printf",cast<Function>(printfFunc));
-	//astContext.addFunction("write",printfL);
-	//astContext.addFunction("printD",printfD);
-	//astContext.addFunction("println",println);
+	builder.CreateRetVoid();
 }

@@ -72,9 +72,16 @@ Value* VariableDeclAST::Codegen(CodeGenContext& astcontext)
 		else if (type->type == Real)
 		{
 			cout<<"new real"<<endl;
-			alloc = new llvm::AllocaInst(Type::getDoubleTy(llvm::getGlobalContext()), this->variableName[i].c_str());
-			// builder.CreateStore(NULL, alloc);			
-			astcontext.locals[variableName[i]] = alloc;	
+			Value *val = ConstantFP::get(Type::getDoubleTy(getGlobalContext()), 0.0);
+			alloc = new llvm::GlobalVariable(module, Type::getDoubleTy(llvm::getGlobalContext()), false, GlobalValue::ExternalLinkage, ConstantFP::get(Type::getDoubleTy(getGlobalContext()), 0.0));
+			// alloc = builder.CreateAlloca(Type::getInt32Ty(llvm::getGlobalContext()));
+			// cout<<"create store"<<endl;
+			// cout << alloc << endl;
+			builder.CreateStore(val, alloc);
+			cout<<"sign up at varTable"<<endl;	
+			cout << variableName[i] << endl;
+			// astcontext.locals.find(this->variableName[i])->second = alloc;
+			astcontext.locals[variableName[i]] = alloc;
 		}
 		else if (type->type == Bool)
 		{
@@ -225,7 +232,7 @@ Value* BinaryExprAST::Codegen(CodeGenContext& astcontext)
 		}
 		case ltKind:
 		{
-			L = builder.CreateCmpULT(L, R, "cmptmp");
+			L = builder.CreateFCmpULT(L, R, "cmptmp");
 			// Convert bool 0/1 to double 0.0 or 1.0
 			return builder.CreateUIToFP(L, Type::getDoubleTy(getGlobalContext()),"booltmp");
 
