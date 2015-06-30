@@ -8,7 +8,9 @@ ConstAST *CreateConstAST(TreeNode *p){
 	constValue val;
 	switch (p->dtype->type){
 		case integer_type: case boolean_type: case char_type:
-			val.i = val.b = val.c = p->attr.intVal;
+			val.i = p->attr.intVal;
+			val.b = p->attr.intVal;
+			val.c = p->attr.intVal;
 			return new ConstAST(name, type, val);
 		case real_type:
 			val.d = p->attr.realVal;
@@ -227,6 +229,17 @@ ExprAST *CreateStmtExprAST(TreeNode *p){
 				CreateExprAST(p->children[1])
 				);
 			tmp->expr_type = BinaryExpr;
+			return tmp;
+		}
+		case proc_stmt:{
+			std::vector<ExprAST *>args;
+			TreeNode *q = p->children[0];
+			while (q){
+				args.push_back(CreateExprAST(q));
+				q = q->sibling;
+			}
+			tmp = new CallExprAST(p->name, args, p->system);
+			tmp->expr_type = CallExpr;
 			return tmp;
 		}
 		default: 
