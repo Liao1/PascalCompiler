@@ -140,7 +140,7 @@ public:
 //所有表达式类的基类
 class ExprAST : public Node{
 public:
-	ExprType type;
+	ExprType expr_type;
 	ExprAST(){}
 	virtual Value* Codegen(CodeGenContext& astcontext){};
 	// ExprAST* ErrorE(const char *str){Error(str); return 0;}//这里设置返回，是为了报错时可以扩展为定位到节点而不是简单出现错误信息
@@ -443,9 +443,9 @@ public:
 	std::vector<FunctionAST*> functions;
 	std::vector<ExprAST*> body;
 
-    functionType type;//区分是procedure还是function
-    bool isFunction() { return type == type_function; }
-    bool isProcedure() { return type == type_procedure; }
+	functionType type;//区分是procedure还是function
+	bool isFunction() { return type == type_function; }
+	bool isProcedure() { return type == type_procedure; }
 
 	FunctionAST(string name, vector<VariableDeclAST *>args, BasicTypeAST *returnType, 
 				vector<ConstAST*> con, vector<SelfdefineTypeAST*> de, 
@@ -456,32 +456,32 @@ public:
 			body(funcBody), type(t){}
 	FunctionAST(const FunctionAST &f)
 		:name(f.name), headerDecl(f.headerDecl), returnType(f.returnType),consts(f.consts), selfdefineType(f.selfdefineType), bodyDecl(f.bodyDecl), functions(f.functions), body(f.body), type(f.type){}
-    Value* Codegen(CodeGenContext &astcontext) override;
+	Value* Codegen(CodeGenContext &astcontext) override;
 	void print(int n) override;
-    // FunctionAST* ErrorF(const char * str) {Error(str); return 0;}
+	// FunctionAST* ErrorF(const char * str) {Error(str); return 0;}
 };
 
 class CodeGenContext{
 public:
-    CodeGenContext *parent;
-    map<string, Type*> typeTable;
-    map<string, FunctionAST*> functionTable;
-    map<string, Value*> locals;
-    FunctionAST *currentFunc;
+	CodeGenContext *parent;
+	map<string, Type*> typeTable;
+	map<string, FunctionAST*> functionTable;
+	map<string, Value*> locals;
+	FunctionAST *currentFunc;
 
-    CodeGenContext(CodeGenContext *parent=NULL):parent(parent){
-        if(parent != NULL){
-            currentFunc = parent->currentFunc;
-        }else{
-            currentFunc = NULL;
-        }
-    }
-    // Type* getType(string name);
-    // FunctionAST* getFunction(string name);
-    // Value* getVar(string name);
-    // bool addFunction(string name, FunctionAST *FunctionAST);
-    // bool addVar(string name, Value *var);
-    // bool addType(string name, Type *type);
+	CodeGenContext(CodeGenContext *parent=NULL):parent(parent){
+		if(parent != NULL){
+			currentFunc = parent->currentFunc;
+		}else{
+			currentFunc = NULL;
+		}
+	}
+	// Type* getType(string name);
+	// FunctionAST* getFunction(string name);
+	// Value* getVar(string name);
+	// bool addFunction(string name, FunctionAST *FunctionAST);
+	// bool addVar(string name, Value *var);
+	// bool addType(string name, Type *type);
 };
 
 #endif

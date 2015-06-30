@@ -80,60 +80,93 @@ ExprAST *CreateExprAST(TreeNode *p){
 	// cout<<"create expr"<<endl;
 	ExprAST *left = CreateExprAST(p->children[0]);
 	ExprAST *right = CreateExprAST(p->children[1]);
+	ExprAST *tmp;
 	switch (p->expr){
 		case op_kind:{
 			switch (p->op){
 				case plus_kind: {
-					return new BinaryExprAST(plusKind, left, right);
+					tmp = new BinaryExprAST(plusKind, left, right);
+					tmp->expr_type = BinaryExpr;
+					return tmp;
 				}
 				case minus_kind: {
-					return new BinaryExprAST(minusKind, left, right);
+					tmp = new BinaryExprAST(minusKind, left, right);
+					tmp->expr_type = BinaryExpr;
+					return tmp;
 				}
 				case or_kind: {
-					return new BinaryExprAST(orKind, left, right);
+					tmp = new BinaryExprAST(orKind, left, right);
+					tmp->expr_type = BinaryExpr;
+					return tmp;
 				}
 				case mul_kind: {
-					return new BinaryExprAST(mulKind, left, right);
+					tmp = new BinaryExprAST(mulKind, left, right);
+					tmp->expr_type = BinaryExpr;
+					return tmp;
 				}
 				case div_kind: {
-					return new BinaryExprAST(divKind, left, right);
+					tmp = new BinaryExprAST(divKind, left, right);
+					tmp->expr_type = BinaryExpr;
+					return tmp;
 				}
 				case mod_kind: {
-					return new BinaryExprAST(modKind, left, right);
+					tmp = new BinaryExprAST(modKind, left, right);
+					tmp->expr_type = BinaryExpr;
+					return tmp;
 				}
 				case and_kind: {
-					return new BinaryExprAST(andKind, left, right);
+					tmp = new BinaryExprAST(andKind, left, right);
+					tmp->expr_type = BinaryExpr;
+					return tmp;
 				}
 				case ge_kind: {
-					return new BinaryExprAST(geKind, left, right);
+					tmp = new BinaryExprAST(geKind, left, right);
+					tmp->expr_type = BinaryExpr;
+					return tmp;
 				}
 				case gt_kind: {
-					return new BinaryExprAST(gtKind, left, right);
+					tmp = new BinaryExprAST(gtKind, left, right);
+					tmp->expr_type = BinaryExpr;
+					return tmp;
 				}
 				case le_kind: {
-					return new BinaryExprAST(leKind, left, right);
+					tmp = new BinaryExprAST(leKind, left, right);
+					tmp->expr_type = BinaryExpr;
+					return tmp;
 				}
 				case lt_kind: {
-					return new BinaryExprAST(ltKind, left, right);
+					tmp = new BinaryExprAST(ltKind, left, right);
+					tmp->expr_type = BinaryExpr;
+					return tmp;
 				}
 				case eq_kind: {
-					return new BinaryExprAST(eqKind, left, right);
+					tmp = new BinaryExprAST(eqKind, left, right);
+					tmp->expr_type = BinaryExpr;
+					return tmp;
 				}
 				case ueq_kind: {
-					return new BinaryExprAST(ueqKind, left, right);
+					tmp = new BinaryExprAST(ueqKind, left, right);
+					tmp->expr_type = BinaryExpr;
+					return tmp;
 				}
 				case not_kind: {
-					return new UnaryExprAST(notKind, left);
+					tmp = new UnaryExprAST(notKind, left);
+					tmp->expr_type = BinaryExpr;
+					return tmp;
 				}
 				case neg_kind: {
-					return new UnaryExprAST(negKind, left);
+					tmp = new UnaryExprAST(negKind, left);
+					tmp->expr_type = BinaryExpr;
+					return tmp;
 				}
 			}
 		}
 		case id_kind:{
 			switch (p->id){
 				case Basic:
-					return new VariableExprAST(p->name);
+					tmp = new VariableExprAST(p->name);
+					tmp->expr_type = Variable;
+					return tmp;
 				case Array:
 					return NULL;
 					/*return new ArrayVariableExprAST(
@@ -147,15 +180,25 @@ ExprAST *CreateExprAST(TreeNode *p){
 		case con_kind:{
 			switch (p->dtype->type){
 				case integer_type:
-					return new NumberExprAST(p->attr.intVal);
+					tmp = new NumberExprAST(p->attr.intVal);
+					tmp->expr_type = NumberExpr;
+					return tmp;
 				case real_type:
-					return new RealExprAST(p->attr.realVal);
+					tmp = new RealExprAST(p->attr.realVal);
+					tmp->expr_type = RealExpr;
+					return tmp;
 				case boolean_type:
-					return new BoolExprAST(p->attr.intVal);
+					tmp = new BoolExprAST(p->attr.intVal);
+					tmp->expr_type = BoolExpr;
+					return tmp;
 				case char_type:
-					return new CharExprAST(p->attr.intVal);
+					tmp = new CharExprAST(p->attr.intVal);
+					tmp->expr_type = CharExpr;
+					return tmp;
 				case string_type:
-					return new StringExprAST(p->attr.strVal);
+					tmp = new StringExprAST(p->attr.strVal);
+					tmp->expr_type = StringExpr;
+					return tmp;
 				default:
 					return NULL;
 			}
@@ -167,19 +210,24 @@ ExprAST *CreateExprAST(TreeNode *p){
 				args.push_back(CreateExprAST(q));
 				q = q->sibling;
 			}
-			return new CallExprAST(p->name, args, p->system);
+			tmp = new CallExprAST(p->name, args, p->system);
+			tmp->expr_type = CallExpr;
+			return tmp;
 		}
 	}
 }
 ExprAST *CreateStmtExprAST(TreeNode *p){
 	// cout<<"createStmt"<<endl;
+	ExprAST *tmp;
 	switch (p->stmt){
 		case assign_stmt:{
-			return new BinaryExprAST(
+			tmp = new BinaryExprAST(
 				assignmentKind,
 				CreateExprAST(p->children[0]),
 				CreateExprAST(p->children[1])
 				);
+			tmp->expr_type = BinaryExpr;
+			return tmp;
 		}
 		default: 
 			return NULL;	
