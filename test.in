@@ -1,10 +1,6 @@
 program test1;
 const
 	aa=10;
-	bb='123';
-	cc=true;
-	dd=1.1;
-	ee='a';
 var
 	a, b, c, i: integer;
 
