@@ -32,8 +32,8 @@ FunctionAST *program = NULL;
 int main(int argc,char **argv){
 	bool runJit = false;
 	bool irOutput = true;
-	bool asmOutput = false;
-	bool objOutput = false;
+	bool asmOutput = true;
+	bool objOutput = true;
 	TargetMachine::CodeGenFileType outputFileType = TargetMachine::CGFT_Null;
 	char *outputFileName = NULL;
 	int option;
@@ -53,10 +53,10 @@ int main(int argc,char **argv){
 	/* ================================================= */
 
 	CodeGenContext astContext;
-	/*astContext.addType("long",builder.getInt64Ty());
-	astContext.addType("double",builder.getDoubleTy());
-	astContext.addType("bool",builder.getInt1Ty());
-	createSystemFunctions(astContext);*/
+	//astContext.addType("long",builder.getInt64Ty());
+	//astContext.addType("double",builder.getDoubleTy());
+	//astContext.addType("bool",builder.getInt1Ty());
+	createSystemFunctions(astContext);
 
 
 	program->Codegen(astContext);
@@ -147,9 +147,10 @@ int main(int argc,char **argv){
 
 	return 0;
 }
-/*
+
 void createSystemFunctions(CodeGenContext& astContext){
 	//insert printf func decl
+	cout << "1" << endl; 
 	vector<Type*> printfFuncArgTypes;
 	printfFuncArgTypes.push_back(builder.getInt8PtrTy());
 	ArrayRef<Type*> printfFuncArgTypesRef(printfFuncArgTypes);
@@ -159,18 +160,20 @@ void createSystemFunctions(CodeGenContext& astContext){
 	vector<Type*> emptyTypes;
 
 	//create print long func
+	cout << "2" << endl; 
 	vector<Type*> printfLongFuncArgTypes;
 	printfLongFuncArgTypes.push_back(builder.getInt64Ty());
 	ArrayRef<Type*> printfLongFuncArgTypesRef(printfLongFuncArgTypes);
 	FunctionType *printfLongFuncType = FunctionType::get(builder.getVoidTy(),printfLongFuncArgTypesRef,false);
-	Function *printfLongFunc = Function::Create(printfLongFuncType,Function::ExternalLinkage,"printL",&module);
+	Function *printfLongFunc = Function::Create(printfLongFuncType,Function::ExternalLinkage,"write",&module);
 	builder.SetInsertPoint(BasicBlock::Create(context,"entry",printfLongFunc));
 	Value *longFormat = builder.CreateGlobalStringPtr("%ld");
 	builder.CreateCall2(printfFunc,longFormat,printfLongFunc->arg_begin());
 	builder.CreateRetVoid();
-	AstFunction *printfL = new AstFunction("printL",printfLongFunc,emptyTypes,printfLongFuncArgTypes);
+	//FunctionAST *printfL = new FunctionAST("write",printfLongFunc,emptyTypes,printfLongFuncArgTypes);
 
 	//create print double func
+	/*cout << "3" << endl;
 	vector<Type*> printfDoubleFuncArgTypes;
 	printfDoubleFuncArgTypes.push_back(builder.getDoubleTy());
 	ArrayRef<Type*> printfDoubleFuncArgTypesRef(printfDoubleFuncArgTypes);
@@ -179,21 +182,21 @@ void createSystemFunctions(CodeGenContext& astContext){
 	builder.SetInsertPoint(BasicBlock::Create(context,"entry",printfDoubleFunc));
 	Value *doubleFormat = builder.CreateGlobalStringPtr("%lf");
 	builder.CreateCall2(printfFunc,doubleFormat,printfDoubleFunc->arg_begin());
-	builder.CreateRetVoid();
-	AstFunction *printfD = new AstFunction("printD",printfDoubleFunc,emptyTypes,printfDoubleFuncArgTypes);
+	builder.CreateRetVoid();*/
+	//FunctionAST *printfD = new FunctionAST("printD",printfDoubleFunc,emptyTypes,printfDoubleFuncArgTypes);
 
 	//create println func
+	/*cout << "4" << endl;
 	FunctionType *printlnFuncType = FunctionType::get(builder.getVoidTy(),false);
 	Function *printlnFunc = Function::Create(printlnFuncType,Function::ExternalLinkage,"println",&module);
 	builder.SetInsertPoint(BasicBlock::Create(context,"entry",printlnFunc));
 	Value *lnFormat = builder.CreateGlobalStringPtr("\n");
 	builder.CreateCall(printfFunc,lnFormat);
-	builder.CreateRetVoid();
-	AstFunction *println = new AstFunction("println",printlnFunc,emptyTypes,emptyTypes);
+	builder.CreateRetVoid();*/
+	//FunctionAST *println = new FunctionAST("println",printlnFunc,emptyTypes,emptyTypes);
 
 	//astContext.addFunction("printf",cast<Function>(printfFunc));
-	astContext.addFunction("printL",printfL);
-	astContext.addFunction("printD",printfD);
-	astContext.addFunction("println",println);
+	//astContext.addFunction("write",printfL);
+	//astContext.addFunction("printD",printfD);
+	//astContext.addFunction("println",println);
 }
-*/
