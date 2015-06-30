@@ -41,12 +41,24 @@ void PrototypeAST::print(int n){
 	}
 }
 */
-void CallExprAST::print(int n){
+void CallFunctionExprAST::print(int n){
 	printTab(n);
 	if (isSystemCall)
-		cout<<"SysCall("<<callee<<")"<<endl;
+		cout<<"SysCall("<<callee<<")function"<<endl;
 	else
-		cout<<"Call("<<callee<<")"<<endl;
+		cout<<"Call("<<callee<<")function"<<endl;
+	for (int i=0; i<args.size(); i++){
+		printTab(n);
+		args[i]->print(n+1);
+	}
+}
+
+void CallProcedureExprAST::print(int n){
+	printTab(n);
+	if (isSystemCall)
+		cout<<"SysCall("<<callee<<")procedure"<<endl;
+	else
+		cout<<"Call("<<callee<<")procedure"<<endl;
 	for (int i=0; i<args.size(); i++){
 		printTab(n);
 		args[i]->print(n+1);
@@ -118,7 +130,10 @@ void NumberExprAST::print(int n){
 
 void VariableDeclAST::print(int n){
 	printTab(n);
-	cout<<"var:"<<endl;
+	if (isGlobal)
+		cout<<"global var:"<<endl;
+	else 
+		cout<<"local var:"<<endl;
 	// if (!type) cout<<"var null"<<endl;
 	// cout<<variableName.size()<<endl;
 	type->print(n+1);
@@ -154,4 +169,36 @@ void BasicTypeAST::print(int n){
 		case Char: cout<<"char"<<endl; break;
 		case Bool: cout<<"boolean"<<endl; break;
 	}
+}
+
+void IfExprAST::print(int n){
+	printTab(n);
+	cout<<"if stmt:"<<endl;
+	printTab(n+1);
+	cout<<"if expr:"<<endl;
+	ifCond->print(n+1);
+	printTab(n+1);
+	cout<<"then stmt:"<<endl;
+	for (int i=0; i<thenComponent.size(); i++)
+		thenComponent[i]->print(n+1);
+	printTab(n+1);
+	cout<<"else stmt:"<<endl;
+	for (int i=0; i<elseComponent.size(); i++)
+		elseComponent[i]->print(n+1);
+}
+
+void ForExprAST::print(int n){
+	printTab(n);
+	cout<<"for expr:"<<endl;
+	printTab(n+1);
+	cout<<"loop var:"<<varName<<endl;
+	start->print(n+1);
+	printTab(n+1);
+	if (increaseDirection)
+		cout<<"to"<<endl;
+	else 
+		cout<<"downto"<<endl;
+	end->print(n+1);
+	for (int i=0; i<body.size(); i++)
+		body[i]->print(n+1);
 }

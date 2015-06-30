@@ -14,6 +14,8 @@
 #include <llvm/IR/Argument.h>
 #include <llvm/IR/Instructions.h>
 #include <llvm/IR/IRBuilder.h>
+#include <llvm/IR/GlobalVariable.h>
+#include <llvm/IR/GlobalValue.h>
 
 class constValue;
 class Node;
@@ -266,6 +268,7 @@ class VariableDeclAST : public Node{
 public:
 	BasicTypeAST *type;
 	vector<string> variableName;
+	int isGlobal;
 	VariableDeclAST(BasicTypeAST *t, vector<string> v):type(t), variableName(v){}
 	VariableDeclAST(const VariableDeclAST &f):type(f.type), variableName(f.variableName){}
 	Value* Codegen(CodeGenContext &astcontext) override;
@@ -362,20 +365,33 @@ public:
 };
 
 //调用函数表达式，包含函数名称和参数
-class CallExprAST : public ExprAST {
+class CallFunctionExprAST : public ExprAST {
 public:
 	string callee;
 	std::vector<ExprAST*> args;
 	bool isSystemCall;
 
-	CallExprAST(const string name, std::vector<ExprAST*> vec, bool is)
+	CallFunctionExprAST(const string name, std::vector<ExprAST*> vec, bool is)
 		:callee(name), args(vec), isSystemCall(is){}
-	CallExprAST(const CallExprAST &f): callee(f.callee), args(f.args), isSystemCall(f.isSystemCall){}
+	CallFunctionExprAST(const CallFunctionExprAST &f): callee(f.callee), args(f.args), isSystemCall(f.isSystemCall){}
 	Value* Codegen(CodeGenContext &astcontext) override;
 	void print(int n) override;
 	// CallExprAST* ErrorC(const char *str){Error(str); return 0;}
 };
+//调用procedure, 包含procedure名称和参数
+class CallProcedureExprAST : public ExprAST {
+public:
+	string callee;
+	std::vector<ExprAST*> args;
+	bool isSystemCall;
 
+	CallProcedureExprAST(const string name, std::vector<ExprAST*> vec, bool is)
+		:callee(name), args(vec), isSystemCall(is){}
+	CallProcedureExprAST(const CallProcedureExprAST &f): callee(f.callee), args(f.args), isSystemCall(f.isSystemCall){}
+	Value* Codegen(CodeGenContext &astcontext) override;
+	void print(int n) override;
+	// CallExprAST* ErrorC(const char *str){Error(str); return 0;}
+};
 //if else表达式
 class IfExprAST : public ExprAST {
 public:
@@ -384,8 +400,8 @@ public:
 
 	IfExprAST(ExprAST *cond, std::vector<ExprAST*> thenCo, std::vector<ExprAST*> elseCo)
 		:ifCond(cond), thenComponent(thenCo), elseComponent(elseCo){}
-	//Value* Codegen(CodeGenContext& context) override;
-	//void print(int n) override;
+	Value* Codegen(CodeGenContext& context) override;
+	void print(int n) override;
 	//IfExprAST* ErrorI(const char *str){Error(str); return 0;}
 };
 
@@ -400,7 +416,7 @@ public:
 	ForExprAST(const string name, ExprAST *st, ExprAST *en, std::vector<ExprAST*> bo, bool inc)
 		:varName(name), start(st), end(en), body(bo), increaseDirection(inc){}
 	//Value* Codegen(CodeGenContext& context) override;
-	//void print(int n) override;
+	void print(int n) override;
 	//ForExprAST* ErrorF(const char *str){Error(str); return 0;}
 };
 

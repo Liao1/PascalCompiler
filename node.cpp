@@ -52,32 +52,36 @@ Value* VariableDeclAST::Codegen(CodeGenContext& astcontext)
 	Value *alloc;
 	for(int i = 0; i < variableName.size(); i++)
 	{
+		if (astcontext.locals.count(variableName[i])!=0){
+			return NULL;
+		}
 		if (type->type == Integer)
 		{
 			cout<<"new integer"<<endl;
-			// alloc = new GlobalVarialbe(module,Type::getInt32Ty(llvm::getGlobalContext()),GlobalValue::ExternalLinkage);
-			alloc = new llvm::AllocaInst(Type::getInt32Ty(llvm::getGlobalContext()), this->variableName[i].c_str());
-			cout<<"create store"<<endl;
-			// cout << alloc << endl;
 			Value *val = builder.getInt32(0);
+			alloc = new llvm::GlobalVariable(module, Type::getInt32Ty(llvm::getGlobalContext()), false, GlobalValue::ExternalLinkage, builder.getInt32(0));
+			// alloc = builder.CreateAlloca(Type::getInt32Ty(llvm::getGlobalContext()));
+			// cout<<"create store"<<endl;
+			// cout << alloc << endl;
 			builder.CreateStore(val, alloc);
 			cout<<"sign up at varTable"<<endl;	
-			cout << this->variableName[i] << endl;	
-			astcontext.locals.find(this->variableName[i])->second = alloc;	
+			cout << variableName[i] << endl;
+			// astcontext.locals.find(this->variableName[i])->second = alloc;
+			astcontext.locals[variableName[i]] = alloc;
 		}
 		else if (type->type == Real)
 		{
 			cout<<"new real"<<endl;
 			alloc = new llvm::AllocaInst(Type::getDoubleTy(llvm::getGlobalContext()), this->variableName[i].c_str());
 			// builder.CreateStore(NULL, alloc);			
-			astcontext.locals.find(this->variableName[i])->second = alloc;	
+			astcontext.locals[variableName[i]] = alloc;	
 		}
 		else if (type->type == Bool)
 		{
 			cout<<"new bool"<<endl;
 			alloc = new llvm::AllocaInst(Type::getInt32Ty(llvm::getGlobalContext()), this->variableName[i].c_str());
 		   	// builder.CreateStore(NULL, alloc);			
-			astcontext.locals.find(this->variableName[i])->second = alloc;	
+			astcontext.locals[variableName[i]] = alloc;
 		} else {
 			return NULL;
 		}
@@ -117,7 +121,10 @@ Value* CharExprAST::Codegen(CodeGenContext& astcontext)	//by ly
 }
 Value* VariableExprAST::Codegen(CodeGenContext& astcontext)
 {  
-	return NULL;
+  // Look this variable up in the function.
+  Value *V = astcontext.locals.find(name)->second;
+  cout<<"pick variable:"<<name<<endl;
+  return builder.CreateLoad(V);
 }
 /*Value* ArrayVariableExprAST::Codegen(CodeGenContext& context)
 {
@@ -138,10 +145,11 @@ Value* UnaryExprAST::Codegen(CodeGenContext& astcontext)
 }
 Value* BinaryExprAST::Codegen(CodeGenContext& astcontext)
 {
-	cout<<"binary"<<endl;
-	Value *L = LExpr->Codegen(astcontext);
-	Value *R = RExpr->Codegen(astcontext);
-	if (L == 0 || R == 0) return 0;
+	Value *L, *R;
+	if (op!=assignmentKind)
+		L = LExpr->Codegen(astcontext);
+	R = RExpr->Codegen(astcontext);
+	// if (L == 0 || R == 0) return 0;
 	std::cout << "Creating binary operation " << op << std::endl;
 	/*if (op == plusKind)
 	{
@@ -207,12 +215,25 @@ Value* BinaryExprAST::Codegen(CodeGenContext& astcontext)
 	}
 	return NULL;*/
 	switch (op){
-		case plusKind: return builder.CreateFAdd(L, R, "addtmp");
-		case minusKind: return builder.CreateFSub(L, R, "subtmp");
+		case plusKind: return builder.CreateAdd(L, R, "addtmp");
+		case minusKind: return builder.CreateSub(L, R, "subtmp");
+		case assignmentKind: 
+		{
+			Value *v = astcontext.locals.find((dynamic_cast<VariableExprAST *>(LExpr))->name)->second;
+			builder.CreateStore(R, v);
+			return NULL;
+		}
+		case ltKind:
+		{
+			L = builder.CreateCmpULT(L, R, "cmptmp");
+			// Convert bool 0/1 to double 0.0 or 1.0
+			return builder.CreateUIToFP(L, Type::getDoubleTy(getGlobalContext()),"booltmp");
+
+		}
 		default: return NULL;
 	}
 }
-Value* CallExprAST::Codegen(CodeGenContext& astcontext)
+Value* CallFunctionExprAST::Codegen(CodeGenContext& astcontext)
 {
 	cout<<"call"<<endl;
 	Function *CalleeF = module.getFunction(callee);
@@ -228,11 +249,33 @@ Value* CallExprAST::Codegen(CodeGenContext& astcontext)
 		ArgsV.push_back(args[i]->Codegen(astcontext));
 		if (ArgsV.back() == 0) return 0;
 	}
-	return builder.CreateCall(CalleeF, ArgsV, "calltmp");
+	ArrayRef<Value*> args(ArgsV);
+	return builder.CreateCall(CalleeF, args, "calltmp");
 }
-/*Value* IfExprAST::Codegen(CodeGenContext& context)
+
+Value* CallProcedureExprAST::Codegen(CodeGenContext& astcontext)
 {
-	  Value *CondV = ifCond->Codegen(context);
+	cout<<"call"<<endl;
+	Function *CalleeF = module.getFunction(callee);
+	if (CalleeF == 0)
+		// return ErrorV("Unknown function referenced");
+		return NULL;
+	// If argument mismatch error.
+	if (CalleeF->arg_size() != args.size())
+		// return ErrorV("Incorrect # arguments passed");
+		return NULL;
+	std::vector<Value*> ArgsV;
+	for (unsigned i = 0, e = args.size(); i != e; ++i) {
+		ArgsV.push_back(args[i]->Codegen(astcontext));
+		if (ArgsV.back() == 0) return 0;
+	}
+	ArrayRef<Value*> args(ArgsV);
+	return builder.CreateCall(CalleeF, args);
+}
+
+Value* IfExprAST::Codegen(CodeGenContext& astcontext)
+{
+	  Value *CondV = ifCond->Codegen(astcontext);
 	  if (CondV == 0)
 		return 0;
 
@@ -254,9 +297,9 @@ Value* CallExprAST::Codegen(CodeGenContext& astcontext)
 	  // Emit then value.
 	  builder.SetInsertPoint(ThenBB);
 
-	  Value *ThenV = thenComponent->Codegen(context);
-	  if (ThenV == 0)
-		return 0;
+	  vector<Value *> ThenV;
+	  for (int i = 0; i < thenComponent.size(); i++)
+	  ThenV.push_back(thenComponent[i]->Codegen(astcontext));
 
 	  builder.CreateBr(MergeBB);
 	  // Codegen of 'Then' can change the current block, update ThenBB for the PHI.
@@ -265,10 +308,9 @@ Value* CallExprAST::Codegen(CodeGenContext& astcontext)
 	  // Emit else block.
 	  TheFunction->getBasicBlockList().push_back(ElseBB);
 	  builder.SetInsertPoint(ElseBB);
-
-	  Value *ElseV = elseComponent->Codegen(context);
-	  if (ElseV == 0)
-		return 0;
+	  vector<Value *> ElseV;
+	  for (int i = 0; i < elseComponent.size(); i++)
+	  ElseV.push_back(elseComponent[i]->Codegen(astcontext));
 
 	  builder.CreateBr(MergeBB);
 	  // Codegen of 'Else' can change the current block, update ElseBB for the PHI.
@@ -279,12 +321,14 @@ Value* CallExprAST::Codegen(CodeGenContext& astcontext)
 	  builder.SetInsertPoint(MergeBB);
 	  PHINode *PN =
 		  builder.CreatePHI(Type::getDoubleTy(getGlobalContext()), 2, "iftmp");
-
-	  PN->addIncoming(ThenV, ThenBB);
-	  PN->addIncoming(ElseV, ElseBB);
+	  for (int i = 0; i < ThenV.size(); i++)
+	  PN->addIncoming(ThenV[i], ThenBB);
+	  for (int i = 0; i < ElseV.size(); i++)
+	  PN->addIncoming(ElseV[i], ElseBB);
 	  return PN;
-
 }
+
+/*
 Value* ForExprAST::Codegen(CodeGenContext& context)
 {
 	  Value *StartVal = start->Codegen(context);
@@ -422,7 +466,7 @@ Value* FunctionAST::Codegen(CodeGenContext& astcontext)
 		else
 			alloc = new llvm::AllocaInst(Type::getVoidTy(llvm::getGlobalContext()), this->name.c_str());
 		// builder.CreateStore(NULL, alloc);		
-		astcontext.locals.find(this->name)->second = alloc;	
+		astcontext.locals[this->name] = alloc;	
 		// auto alloc = new llvm::AllocaInst(this->return_type->toLLVMType(), this->routine_name->name.c_str(), context.currentBlock());
 	}
 	// deal with constant define
@@ -435,12 +479,9 @@ Value* FunctionAST::Codegen(CodeGenContext& astcontext)
 		bodyDecl[i]->Codegen(astcontext);
 	}
 	// deal with program statements
-	for (int i = 0; i < functions.size(); i++)
-	{
-		functions[i]->Codegen(astcontext);
-	}
 	for (int i = 0; i < body.size(); i++)
 	{
+		cout<<"stmt"<<endl;
 		body[i]->Codegen(astcontext);
 	}
 
@@ -450,14 +491,16 @@ Value* FunctionAST::Codegen(CodeGenContext& astcontext)
 		auto load_ret = new llvm::LoadInst(astcontext.locals.find(this->name)->second, this->name);
 	   // llvm::ReturnInst::Create(llvm::getGlobalContext(), load_ret, block);
 		builder.CreateRet(load_ret);
-	}
-	else if(this->isProcedure()) {
+	} else {
 		std::cout << "Generating return void for procedure" << std::endl;
 		builder.CreateRetVoid();
 	 //   llvm::ReturnInst::Create(llvm::getGlobalContext(), block);
-		
 	}
 
+	for (int i = 0; i < functions.size(); i++)
+	{
+		functions[i]->Codegen(astcontext);
+	}
 	// pop block and finsh
   //  context.popBlock();
   //  std::cout << "Creating " << this->toString() << ":" << this->routine_name->name << std::endl;

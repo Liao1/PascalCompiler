@@ -49,7 +49,7 @@ int main(int argc,char **argv){
 	//if (!root) printf("null\n");
 	//print_tree(root, 1);
 	program = CreateFunctionAST(root);
-	//program->print(0);
+	// program->print(0);
 	/* ================================================= */
 
 	CodeGenContext astContext;
@@ -162,12 +162,12 @@ void createSystemFunctions(CodeGenContext& astContext){
 	//create print long func
 	cout << "2" << endl; 
 	vector<Type*> printfLongFuncArgTypes;
-	printfLongFuncArgTypes.push_back(builder.getInt64Ty());
+	printfLongFuncArgTypes.push_back(builder.getInt32Ty());
 	ArrayRef<Type*> printfLongFuncArgTypesRef(printfLongFuncArgTypes);
 	FunctionType *printfLongFuncType = FunctionType::get(builder.getVoidTy(),printfLongFuncArgTypesRef,false);
 	Function *printfLongFunc = Function::Create(printfLongFuncType,Function::ExternalLinkage,"write",&module);
 	builder.SetInsertPoint(BasicBlock::Create(context,"entry",printfLongFunc));
-	Value *longFormat = builder.CreateGlobalStringPtr("%ld");
+	Value *longFormat = builder.CreateGlobalStringPtr("%d");
 	builder.CreateCall2(printfFunc,longFormat,printfLongFunc->arg_begin());
 	builder.CreateRetVoid();
 	//FunctionAST *printfL = new FunctionAST("write",printfLongFunc,emptyTypes,printfLongFuncArgTypes);

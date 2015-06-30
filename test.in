@@ -1,14 +1,7 @@
 program test1;
-const
-	aa=10;
 var
-	a, b, c, i: integer;
-
-function gcd(a:integer; b:integer):integer;
+	a:integer;
 begin
-	gcd:=a+b;
-end;
-
-begin
-	c:=gcd(a,b);
+	a:=10;
+	write(a);
 end.

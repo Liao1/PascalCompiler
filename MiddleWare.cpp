@@ -212,7 +212,7 @@ ExprAST *CreateExprAST(TreeNode *p){
 				args.push_back(CreateExprAST(q));
 				q = q->sibling;
 			}
-			tmp = new CallExprAST(p->name, args, p->system);
+			tmp = new CallFunctionExprAST(p->name, args, p->system);
 			tmp->expr_type = CallExpr;
 			return tmp;
 		}
@@ -220,6 +220,7 @@ ExprAST *CreateExprAST(TreeNode *p){
 }
 ExprAST *CreateStmtExprAST(TreeNode *p){
 	// cout<<"createStmt"<<endl;
+	if (!p) return NULL;
 	ExprAST *tmp;
 	switch (p->stmt){
 		case assign_stmt:{
@@ -238,8 +239,37 @@ ExprAST *CreateStmtExprAST(TreeNode *p){
 				args.push_back(CreateExprAST(q));
 				q = q->sibling;
 			}
-			tmp = new CallExprAST(p->name, args, p->system);
+			tmp = new CallProcedureExprAST(p->name, args, p->system);
 			tmp->expr_type = CallExpr;
+			return tmp;
+		}
+		case if_stmt:{
+			vector<ExprAST *>thenComp, elseComp;
+			TreeNode *q = p->children[1];
+			while (q){
+				thenComp.push_back(CreateStmtExprAST(q));
+				q = q->sibling;
+			}
+			q = p->children[2];
+			while (q){
+				elseComp.push_back(CreateStmtExprAST(q));
+				q = q->sibling;
+			}
+			tmp = new IfExprAST(CreateExprAST(p->children[0]), thenComp, elseComp);
+			return tmp;
+		}
+		case for_stmt: {
+			vector<ExprAST *> execComp;
+			TreeNode *q = p->children[2];
+			while (q){
+				execComp.push_back(CreateStmtExprAST(q));
+				q = q->sibling;
+			}
+			tmp = new ForExprAST(
+				string(p->name),
+				CreateExprAST(p->children[0]),
+				CreateExprAST(p->children[1]),
+				execComp, p->attr.intVal);
 			return tmp;
 		}
 		default: 
@@ -287,6 +317,10 @@ FunctionAST *CreateFunctionAST(TreeNode *p){
 				// cout<<"create var"<<endl;
 				VariableDeclAST *tmp;
 				tmp = CreateVariableAST(q);
+				if (name=="main")
+					tmp->isGlobal = 1;
+				else
+					tmp->isGlobal = 0;
 				decl.push_back(tmp); 
 				break;
 			}
