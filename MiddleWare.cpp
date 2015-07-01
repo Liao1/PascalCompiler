@@ -276,8 +276,53 @@ ExprAST *CreateStmtExprAST(TreeNode *p){
 			return NULL;	
 	}
 }
+vector<ExprAST *>CreateWriteAST(TreeNode *p, char *path){
+	vector<ExprAST *> retVal;
+	ExprAST *tmp;
+	TreeNode *q = p->children[0];
+	while (q){
+		std::vector<ExprAST *>args;
+		args.push_back(CreateExprAST(q));
+		string name("write");
+		TreeNode *type = Lookup(q->name, path)->dtype;
+		switch (type->type){
+			case integer_type: name+="I"; break;
+			case real_type: name+="R"; break;
+			default: name+="I"; break;
+		}
+		tmp = new CallProcedureExprAST(name, args, p->system);
+		tmp->expr_type = CallExpr;
+		retVal.push_back(tmp);
+		q = q->sibling;
+	}
+	return retVal;
+}
+vector<ExprAST *>CreateWriteLnAST(TreeNode *p, char *path){
+	vector<ExprAST *> retVal;
+	ExprAST *tmp;
+	TreeNode *q = p->children[0];
+	while (q){
+		std::vector<ExprAST *>args;
+		args.push_back(CreateExprAST(q));
+		string name("write");
+		TreeNode *type = Lookup(q->name, path)->dtype;
+		switch (type->type){
+			case integer_type: name+="I"; break;
+			case real_type: name+="R"; break;
+			default: name+="I"; break;
+		}
+		tmp = new CallProcedureExprAST(name, args, p->system);
+		tmp->expr_type = CallExpr;
+		retVal.push_back(tmp);
+		q = q->sibling;
+	}
+	std::vector<ExprAST *> args;
+	tmp = new CallProcedureExprAST("writeln", args, p->system);
+	retVal.push_back(tmp);
+	return retVal;
+}
 /* 创建函数过程节点 */
-FunctionAST *CreateFunctionAST(TreeNode *p){
+FunctionAST *CreateFunctionAST(TreeNode *p, char *path){
 	//PrototypeAST *proto;
 	// cout<<"createFunction"<<endl;
 	string name(p->name);
@@ -326,7 +371,9 @@ FunctionAST *CreateFunctionAST(TreeNode *p){
 			}
 			case sub_kind:{
 				// cout<<"create function"<<endl;
-				functions.push_back(CreateFunctionAST(q)); 
+				char lpath[256];
+				sprintf(lpath, "%s/%s", path, q->name);
+				functions.push_back(CreateFunctionAST(q, path)); 
 				break;
 			} 
 		}
@@ -336,7 +383,18 @@ FunctionAST *CreateFunctionAST(TreeNode *p){
 	/* routine body part */
 	q = p->children[1]->children[1];
 	while (q){
-		body.push_back(CreateStmtExprAST(q));
+		if (q->stmt==proc_stmt && q->system){
+			string qname(q->name);
+			vector<ExprAST *> sub_body;
+			if (qname=="write")
+				sub_body = CreateWriteAST(q, path);
+			else if (qname=="writeln")
+				sub_body = CreateWriteLnAST(q, path);
+			for (int i=0; i<sub_body.size(); i++)
+				body.push_back(sub_body[i]);
+		}
+		else 
+			body.push_back(CreateStmtExprAST(q));
 		q = q->sibling;
 	}
 	if (p->sub==func_kind)

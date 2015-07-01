@@ -96,57 +96,57 @@ int is_integer(TreeNode *p){
 		return 0;
 }
 
-// int typeEqual(TreeNode *p, TreeNode *q, char *path){
-// 	/* if p or q's type is selfdefined, get the real type */
-// 	while (p->type==selfdefined_type)
-// 		p = Lookup(p->name, path);
-// 	while (q->type==selfdefined_type)
-// 		q = Lookup(p->name, path);
-// 	/* start with simple type */
-// 	if (SimpleType(p) && SimpleType(q)) 
-// 		return p->type==q->type;
-// 	else if (p->type==array_type && q->type==array_type){
-// 		return typeEqual(p->children[0], q->children[0], path) && typeEqual(p->children[1], q->children[1], path);
-// 	} else if (p->type==record_type && q->type==record_type){
-// 		TreeNode *pchild, *qchild;
-// 		int tmp = 1;
-// 		pchild = p->children[0]; qchild = q->children[0];
-// 		while (tmp && pchild && qchild){
-// 			TreeNode *pfield, *qfield;
-// 			pfield = pchild->children[0]; qfield = qchild->children[0];
-// 			while (tmp && pfield && qfield){
-// 				if (strcmp(pfield->name, qfield->name))
-// 					tmp = 0;
-// 				if (!typeEqual(pfield->dtype, qfield->dtype))
-// 					tmp = 0;
-// 				pfield = pfield->sibling; qfield = qfield->sibling;
-// 			}
-// 			if (pfield || qfield) tmp = 1;
-// 			pchild = pchild->sibling; qchild = qchild->sibling;
-// 		}
-// 		if (pchild || qchild) tmp = 1;
-// 		return tmp;
-// 	} else if (p->type==enum_type && q->type==enum_type){
-// 		if (p->children[1] && q->children[1]){
-// 			/* exp..exp */
-// 			return (p->children[0]->attr.intVal == q->children[0]->attr.intVal) && 
-// 					(p->children[1]->attr.intVal == q->children[1]->attr.intVal);
-// 		} else if (!p->children[1] && !p->children[0]){
-// 			/* (name1, name2, name3, ...) */
-// 			TreeNode *pchild, *qchild;
-// 			pchild = p->children[0]; qchild = q->children[0];
-// 			int tmp = 1;
-// 			while (tmp && pchild && qchild){
-// 				if (strcmp(pchild->name, qchild->name))
-// 					tmp = 0;
-// 				pchild = pchild->sibling; qchild = qchild->sibling;
-// 			}
-// 			if (pchild || qchild) tmp = 0;
-// 			return tmp;
-// 		}
-// 	} else 
-// 		return 0;
-// }
+int typeEqual(TreeNode *p, TreeNode *q, char *path){
+	/* if p or q's type is selfdefined, get the real type */
+	while (p->type==selfdefined_type)
+		p = Lookup(p->name, path);
+ 	while (q->type==selfdefined_type)
+		q = Lookup(p->name, path);
+	/* start with simple type */
+	if (SimpleType(p) && SimpleType(q)) 
+		return p->type==q->type;
+	else if (p->type==array_type && q->type==array_type){
+		return typeEqual(p->children[0], q->children[0], path) && typeEqual(p->children[1], q->children[1], path);
+	} else if (p->type==record_type && q->type==record_type){
+		TreeNode *pchild, *qchild;
+		int tmp = 1;
+		pchild = p->children[0]; qchild = q->children[0];
+		while (tmp && pchild && qchild){
+			TreeNode *pfield, *qfield;
+			pfield = pchild->children[0]; qfield = qchild->children[0];
+			while (tmp && pfield && qfield){
+				if (strcmp(pfield->name, qfield->name))
+					tmp = 0;
+				if (!typeEqual(pfield->dtype, qfield->dtype, path))
+					tmp = 0;
+				pfield = pfield->sibling; qfield = qfield->sibling;
+			}
+			if (pfield || qfield) tmp = 1;
+			pchild = pchild->sibling; qchild = qchild->sibling;
+		}
+		if (pchild || qchild) tmp = 1;
+		return tmp;
+	} else if (p->type==enum_type && q->type==enum_type){
+		if (p->children[1] && q->children[1]){
+			/* exp..exp */
+			return (p->children[0]->attr.intVal == q->children[0]->attr.intVal) && 
+					(p->children[1]->attr.intVal == q->children[1]->attr.intVal);
+		} else if (!p->children[1] && !p->children[0]){
+			/* (name1, name2, name3, ...) */
+			TreeNode *pchild, *qchild;
+			pchild = p->children[0]; qchild = q->children[0];
+			int tmp = 1;
+			while (tmp && pchild && qchild){
+				if (strcmp(pchild->name, qchild->name))
+					tmp = 0;
+				pchild = pchild->sibling; qchild = qchild->sibling;
+			}
+			if (pchild || qchild) tmp = 0;
+			return tmp;
+		}
+	} else 
+		return 0;
+}
 
 // void checkStmt(TreeNode *p, char *path){
 // 	char local_path[256];
