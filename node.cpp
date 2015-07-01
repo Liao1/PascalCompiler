@@ -426,14 +426,55 @@ Value* ForExprAST::Codegen(CodeGenContext& astcontext)
 	return Constant::getNullValue(Type::getInt32Ty(getGlobalContext()));
 
 }
-/*Value* WhileExprAST::Codegen(CodeGenContext& context)
+
+Value* WhileExprAST::Codegen(CodeGenContext& context)
 {
-	return NULL;
+	cout << "-1" << endl;
+	Function *TheFunction = builder.GetInsertBlock()->getParent();
+	cout << "0" << endl;
+	BasicBlock *sloop = BasicBlock::Create(getGlobalContext(), "startloop", TheFunction);
+    BasicBlock *bloop = BasicBlock::Create(getGlobalContext(), "loopStmt", TheFunction);
+    BasicBlock *bexit = BasicBlock::Create(getGlobalContext(), "eixtStmt", TheFunction);    
+    builder.CreateBr(sloop);
+    cout << "1" << endl;
+	TheFunction->getBasicBlockList().push_back(sloop);	
+	builder.SetInsertPoint(sloop);
+
+	Value *CondV = whileCond->Codegen(context);
+	builder.CreateCondBr(CondV, bloop, bexit);
+    TheFunction->getBasicBlockList().pop_back();
+	for (int i = 0; i < body.size(); i ++)
+    body[i]->Codegen(context);
+
+    builder.CreateBr(bexit);
+    TheFunction->getBasicBlockList().pop_back();
+    TheFunction->getBasicBlockList().push_back(bexit);	
+    builder.SetInsertPoint(bexit);
+    return NULL;
+
 }
+
+
 Value* RepeatExprAST::Codegen(CodeGenContext& context)
 {
+	BasicBlock *bloop = BasicBlock::Create(getGlobalContext(), "loopStmt", TheFunction);
+	BasicBlock *bexit = BasicBlock::Create(getGlobalContext(), "eixtStmt", TheFunction);
+	builder.CreateBr(sloop);
+	TheFunction->getBasicBlockList().push_back(sloop);
+	builder.SetInsertPoint(sloop);
+
+	for (int i = 0; i < body.size(); i++) {
+		body[i]->Codegen(context);
+	} 
+	Value *CondV = untilCond->Codegen(context);
+	builder.CreateCondBr(CondV, bexit, bloop);
+	TheFunction->getBasicBlockList().pop_back();
+
+	builder.CreateBr(bexit);
+	TheFunction->getBasicBlockList().push_back(bexit);
+	builder.SetInsertPoint(bexit);
 	return NULL;
-}*/
+}
 Value* FunctionAST::Codegen(CodeGenContext& astcontext)
 {
 	cout<<"function"<<endl;
