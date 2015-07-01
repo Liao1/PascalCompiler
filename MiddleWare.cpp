@@ -89,76 +89,91 @@ ExprAST *CreateExprAST(TreeNode *p){
 				case plus_kind: {
 					tmp = new BinaryExprAST(plusKind, left, right);
 					tmp->expr_type = BinaryExpr;
+					tmp->type = CreateTypeAST(p->dtype);
 					return tmp;
 				}
 				case minus_kind: {
 					tmp = new BinaryExprAST(minusKind, left, right);
 					tmp->expr_type = BinaryExpr;
+					tmp->type = CreateTypeAST(p->dtype);
 					return tmp;
 				}
 				case or_kind: {
 					tmp = new BinaryExprAST(orKind, left, right);
 					tmp->expr_type = BinaryExpr;
+					tmp->type = CreateTypeAST(p->dtype);
 					return tmp;
 				}
 				case mul_kind: {
 					tmp = new BinaryExprAST(mulKind, left, right);
 					tmp->expr_type = BinaryExpr;
+					tmp->type = CreateTypeAST(p->dtype);
 					return tmp;
 				}
 				case div_kind: {
 					tmp = new BinaryExprAST(divKind, left, right);
 					tmp->expr_type = BinaryExpr;
+					tmp->type = CreateTypeAST(p->dtype);
 					return tmp;
 				}
 				case mod_kind: {
 					tmp = new BinaryExprAST(modKind, left, right);
 					tmp->expr_type = BinaryExpr;
+					tmp->type = CreateTypeAST(p->dtype);
 					return tmp;
 				}
 				case and_kind: {
 					tmp = new BinaryExprAST(andKind, left, right);
 					tmp->expr_type = BinaryExpr;
+					tmp->type = CreateTypeAST(p->dtype);
 					return tmp;
 				}
 				case ge_kind: {
 					tmp = new BinaryExprAST(geKind, left, right);
 					tmp->expr_type = BinaryExpr;
+					tmp->type = CreateTypeAST(p->dtype);
 					return tmp;
 				}
 				case gt_kind: {
 					tmp = new BinaryExprAST(gtKind, left, right);
 					tmp->expr_type = BinaryExpr;
+					tmp->type = CreateTypeAST(p->dtype);
 					return tmp;
 				}
 				case le_kind: {
 					tmp = new BinaryExprAST(leKind, left, right);
 					tmp->expr_type = BinaryExpr;
+					tmp->type = CreateTypeAST(p->dtype);
 					return tmp;
 				}
 				case lt_kind: {
 					tmp = new BinaryExprAST(ltKind, left, right);
 					tmp->expr_type = BinaryExpr;
+					tmp->type = CreateTypeAST(p->dtype);
 					return tmp;
 				}
 				case eq_kind: {
 					tmp = new BinaryExprAST(eqKind, left, right);
 					tmp->expr_type = BinaryExpr;
+					tmp->type = CreateTypeAST(p->dtype);
 					return tmp;
 				}
 				case ueq_kind: {
 					tmp = new BinaryExprAST(ueqKind, left, right);
 					tmp->expr_type = BinaryExpr;
+					tmp->type = CreateTypeAST(p->dtype);
 					return tmp;
 				}
 				case not_kind: {
 					tmp = new UnaryExprAST(notKind, left);
 					tmp->expr_type = BinaryExpr;
+					tmp->type = CreateTypeAST(p->dtype);
 					return tmp;
 				}
 				case neg_kind: {
 					tmp = new UnaryExprAST(negKind, left);
 					tmp->expr_type = BinaryExpr;
+					tmp->type = CreateTypeAST(p->dtype);
 					return tmp;
 				}
 			}
@@ -168,6 +183,7 @@ ExprAST *CreateExprAST(TreeNode *p){
 				case Basic:
 					tmp = new VariableExprAST(p->name);
 					tmp->expr_type = Variable;
+					tmp->type = CreateTypeAST(p->dtype);
 					return tmp;
 				case Array:
 					return NULL;
@@ -184,22 +200,27 @@ ExprAST *CreateExprAST(TreeNode *p){
 				case integer_type:
 					tmp = new NumberExprAST(p->attr.intVal);
 					tmp->expr_type = NumberExpr;
+					tmp->type = CreateTypeAST(p->dtype);
 					return tmp;
 				case real_type:
 					tmp = new RealExprAST(p->attr.realVal);
 					tmp->expr_type = RealExpr;
+					tmp->type = CreateTypeAST(p->dtype);
 					return tmp;
 				case boolean_type:
 					tmp = new BoolExprAST(p->attr.intVal);
 					tmp->expr_type = BoolExpr;
+					tmp->type = CreateTypeAST(p->dtype);
 					return tmp;
 				case char_type:
 					tmp = new CharExprAST(p->attr.intVal);
 					tmp->expr_type = CharExpr;
+					tmp->type = CreateTypeAST(p->dtype);
 					return tmp;
 				case string_type:
 					tmp = new StringExprAST(p->attr.strVal);
 					tmp->expr_type = StringExpr;
+					tmp->type = CreateTypeAST(p->dtype);
 					return tmp;
 				default:
 					return NULL;
@@ -214,6 +235,7 @@ ExprAST *CreateExprAST(TreeNode *p){
 			}
 			tmp = new CallFunctionExprAST(p->name, args, p->system);
 			tmp->expr_type = CallExpr;
+			tmp->type = CreateTypeAST(p->dtype);
 			return tmp;
 		}
 	}
@@ -230,6 +252,7 @@ ExprAST *CreateStmtExprAST(TreeNode *p){
 				CreateExprAST(p->children[1])
 				);
 			tmp->expr_type = BinaryExpr;
+			tmp->type = CreateTypeAST(p->children[1]->dtype);
 			return tmp;
 		}
 		case proc_stmt:{

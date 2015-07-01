@@ -150,6 +150,7 @@ void strCatch(char *d, char *s);
 TreeNode *makeLabel(TreeNode *p, int label);
 TreeNode *ConnectNodes(TreeNode *p, TreeNode*q);
 /*================================================*/
+void print_type(TreeNode *p);
 void print_expr_op(TreeNode *p);
 void print_expr_id(TreeNode *p);
 void print_expr_fn(TreeNode *p);

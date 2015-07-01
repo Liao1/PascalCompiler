@@ -6,4 +6,5 @@ void TypeChecking(TreeNode *root);
 void evalType(TreeNode *p, char *path);
 int SimpleType(TreeNode *p);
 int is_integer(TreeNode *p);
+void checkStmt(TreeNode *p, char *path);
 #endif

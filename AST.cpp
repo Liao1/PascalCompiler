@@ -51,6 +51,7 @@ void CallFunctionExprAST::print(int n){
 		printTab(n);
 		args[i]->print(n+1);
 	}
+	type->print(n+1);
 }
 
 void CallProcedureExprAST::print(int n){
@@ -86,6 +87,7 @@ void BinaryExprAST::print(int n){
 	}
 	LExpr->print(n+1);
 	RExpr->print(n+1);
+	type->print(n+1);
 }
 
 void UnaryExprAST::print(int n){
@@ -96,36 +98,43 @@ void UnaryExprAST::print(int n){
 		case negKind: cout<<"neg"<<endl;
 	}
 	expr->print(n+1);
+	type->print(n+1);
 }
 
 void VariableExprAST::print(int n){
 	printTab(n);
 	cout<<"variable:"<<name<<endl;
+	type->print(n+1);
 }
 
 void CharExprAST::print(int n){
 	printTab(n);
 	cout<<"const char:"<<val<<endl;
+	type->print(n+1);
 }
 
 void StringExprAST::print(int n){
 	printTab(n);
 	cout<<"const string:"<<val<<endl;
+	type->print(n+1);
 }
 
 void BoolExprAST::print(int n){
 	printTab(n);
 	cout<<"const bool"<<val<<endl;
+	type->print(n+1);
 }
 
 void RealExprAST::print(int n){
 	printTab(n);
 	cout<<"const real:"<<val<<endl;
+	type->print(n+1);
 }
 
 void NumberExprAST::print(int n){
 	printTab(n);
 	cout<<"const integer:"<<val<<endl;
+	type->print(n+1);
 }
 
 void VariableDeclAST::print(int n){

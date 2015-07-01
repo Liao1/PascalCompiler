@@ -27,9 +27,9 @@ void evalType(TreeNode *p, char *path){
 			break;
 		}
 		case var_kind: {
-			//printf("eval var\n");
-			//if (p->dtype)
-			//	printf("has type\n");
+			// printf("eval var\n");
+			// if (p->dtype)
+				// printf("has type\n");
 			p->children[0]->dtype = p->dtype;
 			evalType(p->children[0], path);
 			evalType(p->sibling, path);
@@ -38,7 +38,7 @@ void evalType(TreeNode *p, char *path){
 		case sub_kind: {
 			switch (p->sub){
 				case func_kind: case proc_kind: {
-					//printf("eval sub: %s\n", p->name);
+					// printf("eval sub: %s\n", p->name);
 					sprintf(local_path, "%s/%s", path, p->name);
 					evalType(p->children[0], local_path);
 					evalType(p->children[1], local_path);
@@ -46,9 +46,14 @@ void evalType(TreeNode *p, char *path){
 					break;
 				}
 				default: {
-					//printf("eval sub param\n");
+					// printf("eval sub param\n");
+					// int tmp;
+					// cin>>tmp;
+					// print_tree(p->dtype, 0);
 					p->children[0]->dtype = p->dtype;
 					evalType(p->children[0], path);
+					evalType(p->children[1], path);
+					evalType(p->sibling, path);
 					break;
 				}
 			}
@@ -99,9 +104,9 @@ int is_integer(TreeNode *p){
 int typeEqual(TreeNode *p, TreeNode *q, char *path){
 	/* if p or q's type is selfdefined, get the real type */
 	while (p->type==selfdefined_type)
-		p = Lookup(p->name, path);
+		p = Lookup(p->name, path)->dtype;
  	while (q->type==selfdefined_type)
-		q = Lookup(p->name, path);
+		q = Lookup(p->name, path)->dtype;
 	/* start with simple type */
 	if (SimpleType(p) && SimpleType(q)) 
 		return p->type==q->type;
@@ -148,86 +153,115 @@ int typeEqual(TreeNode *p, TreeNode *q, char *path){
 		return 0;
 }
 
-// void checkStmt(TreeNode *p, char *path){
-// 	char local_path[256];
-// 	if (!p) return;
-// 	switch (p->node){
-// 		case routine_kind: {
-// 			printf("eval routine\n");
-// 			checkStmt(p->children[0], path);
-// 			checkStmt(p->children[1], path);
-// 			break;
-// 		}
-// 		case const_kind: {
-// 			checkStmt(p->sibling, path);
-// 			break;
-// 		}
-// 		case type_kind: {
-// 			checkStmt(p->sibling, path);
-// 			break;
-// 		}
-// 		case var_kind: {
-// 			checkStmt(p->sibling, path);
-// 			break;
-// 		} 
-// 		case sub_kind: {
-// 			switch (p->sub){
-// 				case func_kind: case proc_kind: {
-// 					checkStmt(p->children[0], local_path);
-// 					checkStmt(p->children[1], local_path);
-// 					checkStmt(p->sibling, path);
-// 					break;
-// 				}
-// 				default: {
-// 					checkStmt(p->children[0], path);
-// 					break;
-// 				}
-// 			}
-// 			break;
-// 		}
-// 		case stmt_kind: {
-// 			checkStmt(p->children[0]);
-// 			checkStmt(p->children[1]);
-// 			checkStmt(p->children[2]);
-// 			switch (p->stmt){
-// 				case assign_stmt: {
-
-// 				}
-// 				case proc_stmt: 
-// 				case if_stmt: 
-// 				case repeat_stmt: 
-// 				case while_stmt: 
-// 				case for_stmt: 
-// 				case case_stmt: 
-// 				case goto_stmt:
-// 				case case_exp_stmt: 
-// 				default: break;
-// 			}
-// 		}
-// 		case expr_kind: {
-// 			switch (p->expr){
-// 				case op_kind: {
-// 					switch (p->op){
-
-// 					}
-// 				}
-// 				case id_kind:
-// 				case fn_kind:
-// 				case con_kind:
-// 				default: break; 
-// 			}
-// 			break;
-// 		}
-// 		default: {
-// 			printf("failed!\n");
-// 			break;
-// 		}
-// 	}
-// }
+void checkStmt(TreeNode *p, char *path){
+	char local_path[256];
+	if (!p) return;
+	// cout<<"path:"<<path<<endl;
+	// getchar();
+	switch (p->node){
+		case routine_kind: {
+			// cout<<"eval routine"<<endl;
+			checkStmt(p->children[0], path);
+			checkStmt(p->children[1], path);
+			break;
+		}
+		case const_kind: {
+			// cout<<"eval const"<<endl;
+			checkStmt(p->sibling, path);
+			break;
+		}
+		case type_kind: {
+			// cout<<"eval type"<<endl;
+			checkStmt(p->sibling, path);
+			break;
+		}
+		case var_kind: {
+			// cout<<"eval var"<<endl;
+			checkStmt(p->sibling, path);
+			break;
+		} 
+		case sub_kind: {
+			// cout<<"sub kind"<<endl;
+			switch (p->sub){
+				case func_kind: case proc_kind: {
+					sprintf(local_path, "%s/%s", path, p->name);
+					// cout<<"enter "<<local_path<<endl;
+					checkStmt(p->children[0], local_path);
+					checkStmt(p->children[1], local_path);
+					checkStmt(p->sibling, path);
+					break;
+				}
+				default: {
+					// cout<<"sub param"<<endl;
+					checkStmt(p->children[0], path);
+					checkStmt(p->children[1], path);
+					checkStmt(p->sibling, path);
+					break;
+				}
+			}
+			break;
+		}
+		case stmt_kind: {
+			// cout<<"eval stmt"<<endl;
+			checkStmt(p->children[0], path);
+			checkStmt(p->children[1], path);
+			checkStmt(p->children[2], path);
+			checkStmt(p->sibling, path);
+			break;
+		}
+		case expr_kind: {
+			switch (p->expr){
+				case op_kind:{
+					// cout<<"eval expr op:"<<endl;
+					checkStmt(p->children[0], path);
+					checkStmt(p->children[1], path);
+					if (p->children[0])
+						p->dtype = p->children[0]->dtype;
+					checkStmt(p->sibling, path);
+					break;
+				}
+				case id_kind:{
+					// cout<<"eval expr id:"<<p->name<<endl;
+					p->dtype = Lookup(p->name, path)->dtype;
+					checkStmt(p->children[0], path);
+					checkStmt(p->children[1], path);
+					checkStmt(p->children[2], path);
+					checkStmt(p->sibling, path);
+					break;
+				} 
+				case fn_kind:{
+					// cout<<"eval func:"<<p->name<<endl;
+					p->dtype = Lookup(p->name, path)->dtype;
+					checkStmt(p->children[0], path);
+					checkStmt(p->children[1], path);
+					checkStmt(p->children[2], path);
+					checkStmt(p->sibling, path);
+					break;
+				}
+				default: {
+					// cout<<"other expr";
+					checkStmt(p->children[0], path);
+					checkStmt(p->children[1], path);
+					checkStmt(p->children[2], path);
+					checkStmt(p->sibling, path);
+					break;
+				} 
+			}
+			break;
+		}
+		default: {
+			printf("failed!\n");
+			break;
+		}
+	}
+}
 
 
 void TypeChecking(TreeNode *root){
 	char path[256];
 	strcpy(path, "global");
 	evalType(root, path);
+	checkStmt(root, path);
+	// cout<<"end check stmt"<<endl;
+	// getchar();
 }

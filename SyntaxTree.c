@@ -192,20 +192,20 @@ void print_const(TreeNode *p){
 void print_type(TreeNode *p){
 	switch (p->type){
 		case decl_type: fprintf(fout, "type of %s is:", p->name); break;
-		case integer_type: fprintf(fout, "type: integer"); break;
-		case real_type: fprintf(fout, "type: real"); break;
-		case boolean_type: fprintf(fout, "type: boolean"); break;
-		case char_type: fprintf(fout, "type: char"); break;
-		case string_type: fprintf(fout, "type: string"); break;
+		case integer_type: fprintf(fout, ": integer"); break;
+		case real_type: fprintf(fout, ": real"); break;
+		case boolean_type: fprintf(fout, ": boolean"); break;
+		case char_type: fprintf(fout, ": char"); break;
+		case string_type: fprintf(fout, ": string"); break;
 		case enum_type: {
-			fprintf(fout, "type: enum:"); 
+			fprintf(fout, ": enum:"); 
 			if (!p->children[1]) fprintf(fout, "names:"); else fprintf(fout, "exprs");  
 			break;
 		}
-		case array_type: fprintf(fout, "type: array"); break;
-		case record_type: fprintf(fout, "type: record"); break;
+		case array_type: fprintf(fout, ": array"); break;
+		case record_type: fprintf(fout, ": record"); break;
 		//case record_domain_type: fprintf(fout, "type: record_domain"); break;
-		case selfdefined_type: 	fprintf(fout, "selfdefined: %s", p->name); break;
+		case selfdefined_type: 	fprintf(fout, ": %s", p->name); break;
 	}
 }
 void print_var(TreeNode *p){
@@ -246,10 +246,26 @@ void print_expr_con(TreeNode *p){
 }
 void print_expr(TreeNode *p){
 	switch (p->expr){
-		case op_kind: { print_expr_op(p); } break;
-		case id_kind: { print_expr_id(p); } break;
-		case fn_kind: { print_expr_fn(p); } break;
-		case con_kind: { print_expr_con(p); } break;
+		case op_kind: { 
+			print_expr_op(p);
+			if(p->dtype)
+				print_type(p->dtype); 
+		} break;
+		case id_kind: { 
+			print_expr_id(p);
+			if(p->dtype)
+				print_type(p->dtype); 
+		} break;
+		case fn_kind: { 
+			print_expr_fn(p); 
+			if(p->dtype)
+				print_type(p->dtype);
+		} break;
+		case con_kind: { 
+			print_expr_con(p); 
+			if(p->dtype)
+				print_type(p->dtype);
+		} break;
 	}
 }
 void print_stmt(TreeNode *p){
@@ -289,7 +305,6 @@ void print_tree(TreeNode *p, int level){
 		case stmt_kind: { print_stmt(p); } break;
 		case sub_kind: { print_sub(p); } break;
 	}
-	print_tree(p->dtype, level+1);
 	print_tree(p->children[0], level+1); print_tree(p->children[1], level+1);
 	print_tree(p->children[2], level+1); print_tree(p->children[3], level+1);
 	print_tree(p->sibling, level);

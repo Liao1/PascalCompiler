@@ -89,13 +89,14 @@ TreeNode *Lookup(char *name, char *path){
 	int ansLevel = -1;
 	TreeNode *ret = NULL;
 	TreeNode *tmp = NULL;
-	printf("lookup:%s, path:%s\n", name, path);
+	// printf("lookup:%s, path:%s\n", name, path);
 	while (p){
 		if (sub_str(p->path, path)){
 			// cout<<"lookup symbol"<<endl;
 			tmp = LookupSymbol(name, p);
 			// cout<<"end"<<endl;
 			if (tmp){
+				// cout<<"find"<<endl;
 				if (ansLevel<p->nestLevel){
 					ret = tmp;
 					ansLevel = p->nestLevel;
