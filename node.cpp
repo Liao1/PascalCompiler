@@ -232,11 +232,9 @@ Value* BinaryExprAST::Codegen(CodeGenContext& astcontext)
 	switch (op){
 		case plusKind: return builder.CreateAdd(L, R, "addtmp");
 		case minusKind: return builder.CreateSub(L, R, "subtmp");
-		case assignmentKind: 
+		case modKind:
 		{
-			Value *v = astcontext.locals.find((dynamic_cast<VariableExprAST *>(LExpr))->name)->second;
-			builder.CreateStore(R, v);
-			return NULL;
+			return builder.CreateSRem(L, R, "modtmp");;
 		}
 		case ltKind:
 		{
@@ -244,6 +242,16 @@ Value* BinaryExprAST::Codegen(CodeGenContext& astcontext)
 			// cout<<"expr val="<<L<<endl;
 			// Convert bool 0/1 to double 0.0 or 1.0
 			return L;
+		}
+		case eqKind:{
+			L = builder.CreateICmpEQ(L, R, "cmptmp");
+			return L;
+		}
+		case assignmentKind: 
+		{
+			Value *v = astcontext.locals.find((dynamic_cast<VariableExprAST *>(LExpr))->name)->second;
+			builder.CreateStore(R, v);
+			return NULL;
 		}
 		default: return NULL;
 	}
@@ -482,13 +490,16 @@ Value* FunctionAST::Codegen(CodeGenContext& astcontext)
 	// add function return variable
 	if (this->isFunction()) {
 		std::cout << "Creating function return value declaration" << std::endl;
-		Value *alloc;
-		if (this->returnType->type == Integer) 
-			alloc = new llvm::AllocaInst(Type::getInt32Ty(llvm::getGlobalContext()), this->name.c_str());
-		else
-			alloc = new llvm::AllocaInst(Type::getVoidTy(llvm::getGlobalContext()), this->name.c_str());
+		Value *retVal;
+		if (this->returnType->type == Integer){
+			retVal = builder.CreateAlloca(Type::getInt32Ty(llvm::getGlobalContext()));
+			// retVal = new llvm::AllocaInst(Type::getInt32Ty(llvm::getGlobalContext()), name.c_str());
+		} else {
+			retVal = builder.CreateAlloca(Type::getVoidTy(llvm::getGlobalContext()));
+			// retVal = new llvm::AllocaInst(Type::getVoidTy(llvm::getGlobalContext()), "retVal");
+		}
 		// builder.CreateStore(NULL, alloc);		
-		astcontext.locals[this->name] = alloc;	
+		astcontext.locals[this->name] = retVal;
 		// auto alloc = new llvm::AllocaInst(this->return_type->toLLVMType(), this->routine_name->name.c_str(), context.currentBlock());
 	}
 	// deal with constant define
@@ -510,15 +521,17 @@ Value* FunctionAST::Codegen(CodeGenContext& astcontext)
 	// return value
 	if (this->isFunction()) {
 		std::cout << "Generating return value for function" << std::endl;
-		auto load_ret = new llvm::LoadInst(astcontext.locals.find(this->name)->second, this->name);
+		auto load_ret = builder.CreateLoad(astcontext.locals.find(this->name)->second);
+		// auto load_ret = new llvm::LoadInst(astcontext.locals.find(this->name)->second, this->name);
 	 // llvm::ReturnInst::Create(llvm::getGlobalContext(), load_ret, block);
 		builder.CreateRet(load_ret);
+		/* free return value */
+		astcontext.locals.erase(this->name);
 	} else {
 		std::cout << "Generating return void for procedure" << std::endl;
 		builder.CreateRetVoid();
 	 // llvm::ReturnInst::Create(llvm::getGlobalContext(), block);
 	}
-
 	// pop block and finsh
 //context.popBlock();
 //std::cout << "Creating " << this->toString() << ":" << this->routine_name->name << std::endl;
