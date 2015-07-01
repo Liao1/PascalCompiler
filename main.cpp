@@ -181,7 +181,15 @@ void createSystemFunctions(CodeGenContext& astContext){
 	builder.CreateRetVoid();
 	
 	//create print string func
-	//StringRef printfStringFuncArgTypesRef("");
+	vector<Type*> pirntfStringFuncArgTypes;
+	pirntfStringFuncArgTypes.push_back(builder.getInt8Ty()->getPointerTo());
+	ArrayRef<Type*> printfStringFuncArgTypesRef(pirntfStringFuncArgTypes);
+	FunctionType *printfStringFuncType = FunctionType::get(builder.getVoidTy(), printfStringFuncArgTypesRef, false);
+	Function *printfStringFunc = Function::Create(printfStringFuncType, Function::ExternalLinkage, "writeS", &module);
+	builder.SetInsertPoint(BasicBlock::Create(context, "entry", printfStringFunc));
+	Value *stringFormat = builder.CreateGlobalStringPtr("%s");
+	builder.CreateCall2(printfFunc,stringFormat,printfStringFunc->arg_begin());
+	builder.CreateRetVoid();
 
 	//create println func
 	FunctionType *printlnFuncType = FunctionType::get(builder.getVoidTy(),false);
